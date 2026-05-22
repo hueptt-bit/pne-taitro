@@ -3705,7 +3705,7 @@ async function doLogin(){
   const btn = document.getElementById('login-btn');
   btn.textContent = 'Đang đăng nhập...'; btn.disabled = true;
   try{
-    const res = await fetch(GAS_URL, { method:'POST', body: JSON.stringify({action:'login', username, password}) });
+    const res = await fetch(GAS_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password));
     const data = await res.json();
     if(data.ok){
       localStorage.setItem(AUTH_KEY, JSON.stringify(data.user));
