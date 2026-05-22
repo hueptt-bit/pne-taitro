@@ -1102,7 +1102,7 @@ function setYear(y){ST.year=y;render();}
 
 // ── ROOM SCHEDULE ──
 function renderRoomSchedule(){
-  const main=document.getElementById('main');
+  const main=document.getElementById('content');
   const allRecs=loadAll(); // all tracks, all years — room schedule is global
   // Flatten all room bookings
   const bookings=[];
@@ -3670,7 +3670,7 @@ function setProposalText(fileName, pages, text, progressBar, statusEl, dropEl, s
 function renderLog(){
   const au=getAuthUser();
   if(!au||au.username!=='hueptt'){
-    document.getElementById('main').innerHTML='<div style="padding:40px;color:#f87171;font-size:14px">⛔ Bạn không có quyền xem trang này.</div>';
+    document.getElementById('content').innerHTML='<div style="padding:40px;color:#f87171;font-size:14px">⛔ Bạn không có quyền xem trang này.</div>';
     return;
   }
   const logs=loadLogs();
@@ -3680,7 +3680,7 @@ function renderLog(){
     const d=new Date(ts);
     return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   };
-  document.getElementById('main').innerHTML=`
+  document.getElementById('content').innerHTML=`
     <div style="padding:24px 28px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
         <div>
