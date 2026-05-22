@@ -874,6 +874,13 @@ const KEY_S='pne_v4';
 // ══ GAS SYNC ══
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzbj-icBWeMN-_5c7wV1SnAoWgk3dtcwzaSj_j_emrvAibrx_HwFr17s7cSngZVjz_VYQ/exec';
 
+// ══ USERS (client-side login, không cần gọi GAS) ══
+const USERS = [
+  {username:'hueptt',   password:'Pne@2026',   name:'Hue PTT',    role:'admin'},
+  {username:'duonght',  password:'Pne@2026',   name:'Thuy Duong', role:'admin'},
+  {username:'pneadmin', password:'Admin@2026', name:'Admin PNE',  role:'admin'},
+];
+
 function gasSetUrl(url){
   localStorage.setItem('pne_gas_url', url.trim());
   location.reload();
@@ -3696,30 +3703,22 @@ const AUTH_KEY = 'pne_auth';
 function getAuthUser(){ try{ return JSON.parse(localStorage.getItem(AUTH_KEY)); }catch(e){ return null; } }
 function showLoginOverlay(){ document.getElementById('login-overlay').classList.remove('hidden'); }
 function hideLoginOverlay(){ document.getElementById('login-overlay').classList.add('hidden'); }
-async function doLogin(){
-  const username = document.getElementById('login-user').value.trim();
+function doLogin(){
+  const username = document.getElementById('login-user').value.trim().toLowerCase();
   const password = document.getElementById('login-pass').value.trim();
   const errEl = document.getElementById('login-error');
   errEl.textContent = '';
   if(!username||!password){ errEl.textContent='Vui lòng nhập đầy đủ thông tin'; return; }
-  const btn = document.getElementById('login-btn');
-  btn.textContent = 'Đang đăng nhập...'; btn.disabled = true;
-  try{
-    const res = await fetch(GAS_URL + '?action=login&username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password));
-    const data = await res.json();
-    if(data.ok){
-      localStorage.setItem(AUTH_KEY, JSON.stringify(data.user));
-      hideLoginOverlay();
-      render();
-      if(GAS_URL){ syncFromGAS(true); }
-      handleUrlParams();
-    } else {
-      errEl.textContent = data.error || 'Sai thông tin đăng nhập';
-    }
-  } catch(e){
-    errEl.textContent = 'Không kết nối được máy chủ';
+  const user = USERS.find(u => u.username.toLowerCase()===username && u.password===password);
+  if(user){
+    localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username, name:user.name, role:user.role}));
+    hideLoginOverlay();
+    render();
+    if(GAS_URL){ syncFromGAS(true); }
+    handleUrlParams();
+  } else {
+    errEl.textContent = 'Sai tên đăng nhập hoặc mật khẩu';
   }
-  btn.textContent = 'Đăng nhập'; btn.disabled = false;
 }
 function doLogout(){
   if(!confirm('Đăng xuất khỏi dashboard?')) return;
