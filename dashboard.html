@@ -315,7 +315,7 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
 </style>
 </head>
 <body>
-<div id="login-overlay">
+<div id="login-overlay" class="hidden">
   <div class="login-card">
     <div class="login-logo">
       <div class="login-badge">PNE</div>
@@ -3810,6 +3810,7 @@ function doLogout(){
 // Kiểm tra auth khi mở dashboard
 if(getAuthUser()){
   hideLoginOverlay();
+  render(); // render lại sidebar với thông tin user
   if(GAS_URL){ syncFromGAS(true); }
   handleUrlParams();
 } else {
