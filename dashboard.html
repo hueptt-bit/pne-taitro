@@ -812,6 +812,7 @@ const ICO={
   check:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>',
   task:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
   calc:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>',
+  log:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
 };
 
 // ══ CONSTANTS ══
@@ -870,6 +871,7 @@ const TRACK_META={
 };
 
 const KEY_S='pne_v4';
+const LOG_KEY='pne_log';
 
 // ══ GAS SYNC ══
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzbj-icBWeMN-_5c7wV1SnAoWgk3dtcwzaSj_j_emrvAibrx_HwFr17s7cSngZVjz_VYQ/exec';
@@ -958,6 +960,18 @@ function saveAll(a){
   pushToGAS(a); // đồng bộ lên GAS sau mỗi lần lưu
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+// ══ ACTIVITY LOG ══
+function loadLogs(){try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]');}catch(e){return[];}}
+function saveLogs(logs){try{localStorage.setItem(LOG_KEY,JSON.stringify(logs));}catch(e){}}
+function addLog(type,detail){
+  const u=getAuthUser();
+  const logs=loadLogs();
+  logs.unshift({ts:new Date().toISOString(),user:u?u.username:'?',name:u?u.name:'?',type,detail});
+  // Giữ tối đa 500 entries
+  if(logs.length>500)logs.length=500;
+  saveLogs(logs);
+}
 function fmtMoney(n){if(!n||n==0)return'—';if(n>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n+'';}
 function fmtMoneyFull(n){if(!n||n==0)return'0đ';return n.toLocaleString('vi-VN')+'đ';}
 function stageMeta(id){return STAGES.find(s=>s.id===id)||STAGES[0];}
@@ -986,6 +1000,7 @@ function render(){
   else if(ST.view==='list')renderList();
   else if(ST.view==='room_schedule')renderRoomSchedule();
   else if(ST.view==='stats')renderStats();
+  else if(ST.view==='log')renderLog();
 }
 function needsApproval(r){return offerTotal(r)>0&&(!r.approval||!r.approval.status||r.approval.status==='pending');}
 function approveOffer(id,status){
@@ -1022,7 +1037,7 @@ function renderSidebar(){
   const all=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
   const cnt={};STAGES.forEach(st=>{cnt[st.id]=all.filter(r=>r.stage===st.id).length;});
   const pendingCnt=all.filter(r=>needsApproval(r)).length;
-  const tm=trackMeta();const navs=[{id:'overview',label:'Tổng quan',ico:'home'},{id:'kanban',label:'Kanban',ico:'kanban'},{id:'list',label:'Danh sách',ico:'list'},{id:'stats',label:'Thống kê',ico:'chart'},{id:'room_schedule',label:'Lịch phòng',ico:'room'}];
+  const tm=trackMeta();const _au=getAuthUser();const navs=[{id:'overview',label:'Tổng quan',ico:'home'},{id:'kanban',label:'Kanban',ico:'kanban'},{id:'list',label:'Danh sách',ico:'list'},{id:'stats',label:'Thống kê',ico:'chart'},{id:'room_schedule',label:'Lịch phòng',ico:'room'}];if(_au&&_au.username==='hueptt')navs.push({id:'log',label:'Nhật ký',ico:'log'});
   document.getElementById('sb').innerHTML=`
     <div class="sb-logo">
       <div class="sb-badge">PNE</div>
@@ -2876,6 +2891,9 @@ function saveRecord(){
       return;
     }
     console.log('saveRecord OK: id=',savedId,'total records=',check.length,'track=',check.find(x=>x.id===savedId)?.track,'year=',check.find(x=>x.id===savedId)?.year);
+    // Activity log
+    const logRec=check.find(x=>x.id===savedId);
+    addLog(isNewRecord?'add':'edit', (isNewRecord?'Thêm mới':'Cập nhật')+' hồ sơ: '+(logRec?logRec.org+' — '+logRec.event:savedId));
   }catch(e){
     showToast('❌ Lưu thất bại: '+e.message,'error',5000);
     console.error('saveRecord error:',e);
@@ -3276,6 +3294,9 @@ function advanceStage(id,e){
 }
 function deleteRecord(id){
   if(!confirm('Xoá hồ sơ này?'))return;
+  // Log trước khi xoá (còn tìm được org/event)
+  const toDelete=loadAll().find(x=>x.id===id);
+  addLog('delete','Xoá hồ sơ: '+(toDelete?toDelete.org+' — '+toDelete.event:id));
   // Lưu ID đã xoá để syncFromGAS không tự thêm lại
   const deleted=JSON.parse(localStorage.getItem('pne_deleted')||'[]');
   if(!deleted.includes(id)){deleted.push(id);localStorage.setItem('pne_deleted',JSON.stringify(deleted));}
@@ -3294,6 +3315,7 @@ function importFromSheets(){
   let existing=loadAll().filter(r=>!r.id.startsWith('xls_'));
   SHEETS_DATA.forEach(r=>existing.push(r));
   saveAll(existing);
+  addLog('import','Import '+SHEETS_DATA.length+' hồ sơ từ Excel (2024–2026)');
   render();
   showToast('✅ Đã cập nhật '+SHEETS_DATA.length+' hồ sơ từ Excel','ok');
 }
@@ -3644,6 +3666,63 @@ function setProposalText(fileName, pages, text, progressBar, statusEl, dropEl, s
   setTimeout(() => parseProposal(), 400);
 }
 
+// ══ ACTIVITY LOG VIEW ══
+function renderLog(){
+  const au=getAuthUser();
+  if(!au||au.username!=='hueptt'){
+    document.getElementById('main').innerHTML='<div style="padding:40px;color:#f87171;font-size:14px">⛔ Bạn không có quyền xem trang này.</div>';
+    return;
+  }
+  const logs=loadLogs();
+  const typeLabel={login:'Đăng nhập',add:'Thêm hồ sơ',edit:'Cập nhật hồ sơ',delete:'Xoá hồ sơ',import:'Import Excel'};
+  const typeColor={login:'#60a5fa',add:'#34d399',edit:'#fbbf24',delete:'#f87171',import:'#a78bfa'};
+  const fmtTs=ts=>{
+    const d=new Date(ts);
+    return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  document.getElementById('main').innerHTML=`
+    <div style="padding:24px 28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <h2 style="font-size:18px;font-weight:700;color:var(--tx);margin:0">Nhật ký hoạt động</h2>
+          <p style="font-size:12px;color:var(--tx2);margin:4px 0 0">Lịch sử đăng nhập và thao tác dữ liệu · ${logs.length} bản ghi</p>
+        </div>
+        <button onclick="if(confirm('Xoá toàn bộ nhật ký?')){localStorage.removeItem('${LOG_KEY}');renderLog();}" style="background:#f8717122;color:#f87171;border:1px solid #f8717144;border-radius:7px;padding:6px 14px;font-size:12px;cursor:pointer;font-family:inherit">Xoá log</button>
+      </div>
+      ${logs.length===0
+        ? '<div style="text-align:center;color:var(--tx2);font-size:13px;padding:60px 0">Chưa có hoạt động nào được ghi lại.</div>'
+        : `<div style="background:var(--card);border:1px solid var(--brd);border-radius:12px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:rgba(255,255,255,.04);border-bottom:1px solid var(--brd)">
+                <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--tx2);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Thời gian</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--tx2);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Người dùng</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--tx2);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Loại</th>
+                <th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--tx2);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logs.map((l,i)=>`
+                <tr style="border-bottom:1px solid rgba(255,255,255,.04);${i%2===0?'background:rgba(255,255,255,.01)':''}">
+                  <td style="padding:10px 14px;color:var(--tx2);white-space:nowrap;font-size:12px">${fmtTs(l.ts)}</td>
+                  <td style="padding:10px 14px">
+                    <div style="display:flex;align-items:center;gap:7px">
+                      <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#5b5bd6,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:700;flex-shrink:0">${(l.name||l.user||'?').charAt(0).toUpperCase()}</div>
+                      <span style="color:var(--tx);font-weight:500">${l.name||l.user}</span>
+                    </div>
+                  </td>
+                  <td style="padding:10px 14px">
+                    <span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:${(typeColor[l.type]||'#8b9ab0')}22;color:${typeColor[l.type]||'#8b9ab0'}">${typeLabel[l.type]||l.type}</span>
+                  </td>
+                  <td style="padding:10px 14px;color:var(--tx);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.detail||'—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`
+      }
+    </div>`;
+}
+
 // ══ INIT ══
 document.getElementById('searchIcon').innerHTML=ICO.search;
 // Auto-seed từ Google Sheets nếu localStorage chưa có dữ liệu
@@ -3712,6 +3791,8 @@ function doLogin(){
   const user = USERS.find(u => u.username.toLowerCase()===username && u.password===password);
   if(user){
     localStorage.setItem(AUTH_KEY, JSON.stringify({username:user.username, name:user.name, role:user.role}));
+    // Log đăng nhập (sau khi set auth để addLog lấy được user)
+    addLog('login','Đăng nhập thành công');
     hideLoginOverlay();
     render();
     if(GAS_URL){ syncFromGAS(true); }
