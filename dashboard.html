@@ -3816,6 +3816,31 @@ if(getAuthUser()){
 } else {
   showLoginOverlay();
 }
+
+// ══ AUTO-SYNC — kiểm tra hồ sơ mới từ GAS mỗi 3 phút ══
+if(GAS_URL){
+  setInterval(function(){
+    if(!getAuthUser()) return;
+    fetch(GAS_URL + '?action=getAll')
+      .then(r => r.json())
+      .then(data => {
+        if(!data.ok || !Array.isArray(data.records)) return;
+        const local      = loadAll();
+        const localIds   = new Set(local.map(r => r.id));
+        const localDel   = JSON.parse(localStorage.getItem('pne_deleted') || '[]');
+        const gasDel     = Array.isArray(data.deletedIds) ? data.deletedIds : [];
+        const allDel     = new Set([...localDel, ...gasDel]);
+        if(gasDel.length > 0) localStorage.setItem('pne_deleted', JSON.stringify([...allDel]));
+        const newRecs    = data.records.filter(r => !localIds.has(r.id) && !allDel.has(r.id));
+        if(newRecs.length > 0){
+          saveAll([...local, ...newRecs]);
+          render();
+          showToast('🔔 ' + newRecs.length + ' hồ sơ mới!', 'success', 6000);
+        }
+      })
+      .catch(e => console.warn('auto-sync lỗi:', e));
+  }, 3 * 60 * 1000); // mỗi 3 phút
+}
 </script>
 
 <div class="modal-bg" id="exportVModal" style="display:none" onclick="if(event.target===this)closeExportVModal()">
