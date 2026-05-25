@@ -406,7 +406,10 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
             <button class="btn btn-ghost btn-sm" onclick="document.getElementById('email_extract_hint').style.display='none'" style="font-size:12px">Bỏ qua</button>
           </div>
         </div>
-        <div class="form-row"><label>Tên Trường / Đại học</label><input id="f_school" placeholder="VD: Đại học Sư phạm Kỹ thuật TP.HCM"></div>
+        <div class="form-2col">
+          <div class="form-row"><label>Tên Trường / Đại học</label><input id="f_school" placeholder="VD: Đại học Khoa học Xã hội và Nhân văn" oninput="autoFillSchoolAbbrev()"></div>
+          <div class="form-row"><label>Viết tắt trường <span style="font-size:10.5px;color:var(--tx3);font-weight:400">(tự động nhận diện)</span></label><input id="f_school_abbrev" placeholder="Tự động điền khi nhập tên trường" style="font-family:monospace" title="Tự động từ bảng 60+ trường. Có thể sửa tay nếu cần."></div>
+        </div>
         <div class="form-2col">
           <div class="form-row"><label>Mảng tài trợ</label>
             <select id="f_track" onchange="updateModalForTrack()">
@@ -1057,6 +1060,99 @@ const LIENHE_MAP={moi:{c:'#0ea5e9',bg:'#e0f2fe',t:'Mới nhận',icon:'🆕'},za
 const LIENHE_CYCLE=['moi','zalo','khong_phan_hoi'];
 const LIENHE_SHOW_STAGES=new Set(['received','reviewing']); // chỉ hiện badge ở 2 stage đầu
 const UNCONTACTED_WARN_DAYS=5; // cảnh báo sau N ngày chưa liên hệ
+// === BẢNG VIẾT TẮT TRƯỜNG ĐẠI HỌC VIỆT NAM ===
+const SCHOOL_ABBREV_TABLE=[
+  // Hà Nội
+  {a:'BKHN',  k:['bach khoa ha noi','bkhn','hust','dai hoc bach khoa ha noi']},
+  {a:'NEU',   k:['kinh te quoc dan','neu','national economics']},
+  {a:'FTU',   k:['ngoai thuong ha noi','ftu ha noi','dai hoc ngoai thuong','foreign trade']},
+  {a:'HUS',   k:['khoa hoc tu nhien ha noi','hus vnu','tu nhien vnu']},
+  {a:'USSH',  k:['khoa hoc xa hoi nhan van ha noi','ussh','xhnv ha noi','social sciences hanoi']},
+  {a:'ULIS',  k:['ngoai ngu vnu','ulis','dai hoc ngoai ngu ha noi']},
+  {a:'UET',   k:['cong nghe vnu ha noi','uet vnu','dai hoc cong nghe ha noi']},
+  {a:'HNUE',  k:['su pham ha noi','hnue','hanoi national university of education','dai hoc su pham ha noi']},
+  {a:'HLU',   k:['luat ha noi','hlu','hanoi law university']},
+  {a:'HMU',   k:['y ha noi','hmu','hanoi medical university','dai hoc y ha noi']},
+  {a:'UTC',   k:['giao thong van tai','utc','university of transport']},
+  {a:'NUCE',  k:['xay dung','nuce','national university of civil engineering']},
+  {a:'HaUI',  k:['cong nghiep ha noi','haui','hanoi university of industry']},
+  {a:'HVNH',  k:['hoc vien ngan hang','banking academy','hvnh']},
+  {a:'HVTC',  k:['hoc vien tai chinh','hvtc','academy of finance']},
+  {a:'AJC',   k:['bao chi tuyen truyen','ajc','academy of journalism']},
+  {a:'PTIT',  k:['buu chinh vien thong','ptit','posts and telecommunications']},
+  {a:'TMU',   k:['thuong mai','tmu','thuong mai ha noi','hanoi university of business']},
+  {a:'HOU',   k:['mo ha noi','hou','hanoi open university']},
+  {a:'HANU',  k:['ha noi hanu','hanoi university hanu','dai hoc ha noi hanu']},
+  {a:'TLU',   k:['thang long','tlu','thang long university']},
+  {a:'EPU',   k:['dien luc','epu','electric power university']},
+  {a:'WRU',   k:['thuy loi','wru','water resources university']},
+  {a:'VNUF',  k:['lam nghiep','vnuf','vietnam national university of forestry']},
+  {a:'VNUA',  k:['nong nghiep','vnua','vietnam national university of agriculture']},
+  {a:'VNU',   k:['quoc gia ha noi','vnu ha noi','đhqghn']},
+  {a:'FPT',   k:['fpt','dai hoc fpt']},
+  // TP.HCM
+  {a:'HCMUT', k:['bach khoa tphcm','bach khoa ho chi minh','hcmut','bk hcm']},
+  {a:'UEH',   k:['kinh te tphcm','kinh te ho chi minh','ueh','university of economics hcm']},
+  {a:'FTU2',  k:['ngoai thuong co so 2','ngoai thuong tphcm','ftu2']},
+  {a:'HCMUS', k:['khoa hoc tu nhien tphcm','hcmus','tu nhien hcm']},
+  {a:'HCMUSSH',k:['khoa hoc xa hoi nhan van tphcm','hcmussh','xhnv hcm','xhnv tphcm']},
+  {a:'UIT',   k:['cong nghe thong tin vnu hcm','uit','university of information technology']},
+  {a:'UEL',   k:['kinh te luat','uel','university of economics and law']},
+  {a:'IU',    k:['quoc te vnu hcm','international university vnu','iu vnu']},
+  {a:'HCMUE', k:['su pham tphcm','hcmue','ho chi minh city university of education','su pham hcm']},
+  {a:'HCMUTE',k:['su pham ky thuat tphcm','hcmute','spkt tphcm','spkt hcm']},
+  {a:'UMP',   k:['y duoc tphcm','ump','university of medicine and pharmacy hcm']},
+  {a:'HCMULAW',k:['luat tphcm','hcmulaw','luat hcm']},
+  {a:'TDTU',  k:['ton duc thang','tdtu']},
+  {a:'VLU',   k:['van lang','vlu']},
+  {a:'HSU',   k:['hoa sen','hsu']},
+  {a:'NTT',   k:['nguyen tat thanh','ntt']},
+  {a:'IUH',   k:['cong nghiep tphcm','iuh','industrial university hcm']},
+  {a:'HUTECH',k:['ky thuat cong nghe tphcm','hutech']},
+  {a:'OU',    k:['mo tphcm','mo ho chi minh','ou hcm','open university hcm']},
+  {a:'HUB',   k:['ngan hang tphcm','hub','banking university hcm']},
+  {a:'VNU-HCM',k:['quoc gia tphcm','quoc gia ho chi minh','vnu hcm','đhqg tphcm']},
+  {a:'RMIT',  k:['rmit']},
+  // Đà Nẵng
+  {a:'DUT',   k:['bach khoa da nang','dut','da nang university of technology']},
+  {a:'DUE',   k:['kinh te da nang','due','da nang university of economics']},
+  {a:'UD',    k:['da nang ud','university of danang']},
+  // Các tỉnh khác
+  {a:'CTU',   k:['can tho','ctu','can tho university']},
+  {a:'HU',    k:['dai hoc hue','university of hue']},
+  {a:'DLU',   k:['da lat','dlu','dalat university']},
+  {a:'NTU',   k:['nha trang','ntu','nha trang university']},
+  {a:'VU',    k:['vinh university','dai hoc vinh']},
+];
+function normalizeStr(s){
+  if(!s)return'';
+  return s.toLowerCase()
+    .replace(/[àáạảãâầấậẩẫăằắặẳẵ]/g,'a')
+    .replace(/[èéẹẻẽêềếệểễ]/g,'e')
+    .replace(/[ìíịỉĩ]/g,'i')
+    .replace(/[òóọỏõôồốộổỗơờớợởỡ]/g,'o')
+    .replace(/[ùúụủũưừứựửữ]/g,'u')
+    .replace(/[ỳýỵỷỹ]/g,'y')
+    .replace(/đ/g,'d')
+    .replace(/[^a-z0-9\s]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function lookupSchoolAbbrev(name){
+  if(!name)return null;
+  const n=normalizeStr(name);
+  for(const entry of SCHOOL_ABBREV_TABLE){
+    if(entry.k.some(k=>n.includes(k)))return entry.a;
+  }
+  return null;
+}
+function autoFillSchoolAbbrev(){
+  const schoolEl=document.getElementById('f_school');
+  const abbrevEl=document.getElementById('f_school_abbrev');
+  if(!schoolEl||!abbrevEl)return;
+  const found=lookupSchoolAbbrev(schoolEl.value);
+  if(found){abbrevEl.value=found;abbrevEl.style.color='#16a34a';}
+  else{abbrevEl.style.color='';if(!abbrevEl.value)abbrevEl.placeholder='Chưa nhận ra — nhập tay';}
+}
 function daysUncontacted(r){
   if(!LIENHE_SHOW_STAGES.has(r.stage))return null; // đã qua offer rồi, không tính
   if((r.lienhe_status||r.lienhe||'moi')!=='moi')return null; // đã liên hệ rồi
@@ -1076,7 +1172,9 @@ function abbrevName(n){
 }
 function generateVoucherCode(){
   const org=abbrevName((document.getElementById('f_org')||{}).value||'');
-  const school=abbrevName((document.getElementById('f_school')||{}).value||'');
+  const schoolManual=((document.getElementById('f_school_abbrev')||{}).value||'').trim().toUpperCase();
+  const schoolName=(document.getElementById('f_school')||{}).value||'';
+  const school=schoolManual||lookupSchoolAbbrev(schoolName)||abbrevName(schoolName);
   const signingVal=(document.getElementById('f_signing_date')||{}).value||'';
   const dt=signingVal?new Date(signingVal):new Date();
   const mm=String(dt.getMonth()+1).padStart(2,'0');
@@ -2990,7 +3088,7 @@ function openAddModal(id){
   if(id){
     const r=loadAll().find(x=>x.id===id);
     if(r){
-      document.getElementById('f_org').value=r.org||'';document.getElementById('f_event').value=r.event||'';document.getElementById('f_school').value=r.school||'';
+      document.getElementById('f_org').value=r.org||'';document.getElementById('f_event').value=r.event||'';document.getElementById('f_school').value=r.school||'';document.getElementById('f_school_abbrev').value=r.school_abbrev||lookupSchoolAbbrev(r.school)||'';
       document.getElementById('f_event_type').value=r.event_type||'';
       document.getElementById('f_final_attendance').value=r.final_attendance||'';
       document.getElementById('f_event_budget').value=r.event_budget||'';
@@ -3040,7 +3138,7 @@ function openAddModal(id){
       loadRoomDraftFromRecord(r);
     }
   }else{
-    ['f_org','f_event','f_school','f_event_budget','f_prize_structure','f_activity_list','f_event_budget_chain','f_proposalUrl','f_hangmuc','f_contact','f_phone','f_zalo_group','f_notes','f_proposalText','f_receivedDate','f_deadlineDate','f_final_offer_note','f_contract_note','f_signing_date','f_contract_link','f_hopdong','f_mavoucher','f_hanvoucher','f_voucher_print_qty','f_anhsukien','f_data','f_tracking','f_username','f_password','f_expiry','f_test_account_type','f_test_offer_note'].forEach(fid=>document.getElementById(fid).value='');
+    ['f_org','f_event','f_school','f_school_abbrev','f_event_budget','f_prize_structure','f_activity_list','f_event_budget_chain','f_proposalUrl','f_hangmuc','f_contact','f_phone','f_zalo_group','f_notes','f_proposalText','f_receivedDate','f_deadlineDate','f_final_offer_note','f_contract_note','f_signing_date','f_contract_link','f_hopdong','f_mavoucher','f_hanvoucher','f_voucher_print_qty','f_anhsukien','f_data','f_tracking','f_username','f_password','f_expiry','f_test_account_type','f_test_offer_note'].forEach(fid=>document.getElementById(fid).value='');
     document.getElementById('f_voucher_status').value='';
     document.getElementById('f_test_platform').value='test_online';
     _negDraft=null;_negTestPkgIdx=null;
@@ -3097,7 +3195,7 @@ function saveRecord(){
   if(_editId){
     const r=a.find(x=>x.id===_editId);
     if(r){
-      r.org=org;r.event=event;r.school=document.getElementById('f_school').value.trim();r.event_type=document.getElementById('f_event_type').value;r.final_attendance=document.getElementById('f_final_attendance').value.trim();r.event_budget=document.getElementById('f_event_budget').value.trim();r.prize_structure=document.getElementById('f_prize_structure').value.trim();r.activity_list=document.getElementById('f_activity_list').value.trim();r.event_budget_chain=document.getElementById('f_event_budget_chain').value.trim();r.track=document.getElementById('f_track').value;r.cat=document.getElementById('f_cat').value;r.stage=document.getElementById('f_stage').value;r.year=document.getElementById('f_year').value;r.receivedDate=document.getElementById('f_receivedDate').value;r.deadlineDate=document.getElementById('f_deadlineDate').value;r.proposalUrl=document.getElementById('f_proposalUrl').value;r.hangmuc=getHangmucVal();r.contact=contact;r.phone=document.getElementById('f_phone').value.trim();r.zaloGroup=document.getElementById('f_zalo_group').value.trim();r.notes=document.getElementById('f_notes').value;r.proposalText=proposalTextVal;r.lienhe_status=document.getElementById('f_lienhe_status').value;r.final_offer_type=document.getElementById('f_final_offer_type').value;r.final_offer_note=document.getElementById('f_final_offer_note').value;r.contract_status=document.getElementById('f_contract_status').value;r.contract_method=document.getElementById('f_contract_method').value;r.signing_date=document.getElementById('f_signing_date').value;r.contract_link=document.getElementById('f_contract_link').value;r.contract_note=document.getElementById('f_contract_note').value;r.hopdong=document.getElementById('f_hopdong').value.trim();r.mavoucher=document.getElementById('f_mavoucher').value.trim();r.hanvoucher=document.getElementById('f_hanvoucher').value;r.voucher_print_qty=document.getElementById('f_voucher_print_qty').value;r.voucher_status=document.getElementById('f_voucher_status').value;r.anhsukien=document.getElementById('f_anhsukien').value.trim();r.data=document.getElementById('f_data').value.trim();r.tracking=document.getElementById('f_tracking').value.trim();r.username=document.getElementById('f_username').value.trim();r.password=document.getElementById('f_password').value.trim();r.expiry=document.getElementById('f_expiry').value;r.test_platform=document.getElementById('f_test_platform').value;r.test_account_type=document.getElementById('f_test_account_type').value.trim();r.test_offer_note=document.getElementById('f_test_offer_note').value.trim();
+      r.org=org;r.event=event;r.school=document.getElementById('f_school').value.trim();r.school_abbrev=document.getElementById('f_school_abbrev').value.trim().toUpperCase();r.event_type=document.getElementById('f_event_type').value;r.final_attendance=document.getElementById('f_final_attendance').value.trim();r.event_budget=document.getElementById('f_event_budget').value.trim();r.prize_structure=document.getElementById('f_prize_structure').value.trim();r.activity_list=document.getElementById('f_activity_list').value.trim();r.event_budget_chain=document.getElementById('f_event_budget_chain').value.trim();r.track=document.getElementById('f_track').value;r.cat=document.getElementById('f_cat').value;r.stage=document.getElementById('f_stage').value;r.year=document.getElementById('f_year').value;r.receivedDate=document.getElementById('f_receivedDate').value;r.deadlineDate=document.getElementById('f_deadlineDate').value;r.proposalUrl=document.getElementById('f_proposalUrl').value;r.hangmuc=getHangmucVal();r.contact=contact;r.phone=document.getElementById('f_phone').value.trim();r.zaloGroup=document.getElementById('f_zalo_group').value.trim();r.notes=document.getElementById('f_notes').value;r.proposalText=proposalTextVal;r.lienhe_status=document.getElementById('f_lienhe_status').value;r.final_offer_type=document.getElementById('f_final_offer_type').value;r.final_offer_note=document.getElementById('f_final_offer_note').value;r.contract_status=document.getElementById('f_contract_status').value;r.contract_method=document.getElementById('f_contract_method').value;r.signing_date=document.getElementById('f_signing_date').value;r.contract_link=document.getElementById('f_contract_link').value;r.contract_note=document.getElementById('f_contract_note').value;r.hopdong=document.getElementById('f_hopdong').value.trim();r.mavoucher=document.getElementById('f_mavoucher').value.trim();r.hanvoucher=document.getElementById('f_hanvoucher').value;r.voucher_print_qty=document.getElementById('f_voucher_print_qty').value;r.voucher_status=document.getElementById('f_voucher_status').value;r.anhsukien=document.getElementById('f_anhsukien').value.trim();r.data=document.getElementById('f_data').value.trim();r.tracking=document.getElementById('f_tracking').value.trim();r.username=document.getElementById('f_username').value.trim();r.password=document.getElementById('f_password').value.trim();r.expiry=document.getElementById('f_expiry').value;r.test_platform=document.getElementById('f_test_platform').value;r.test_account_type=document.getElementById('f_test_account_type').value.trim();r.test_offer_note=document.getElementById('f_test_offer_note').value.trim();
       r.updatedAt=new Date().toISOString();
       if(negItems!==null){
         r.neg_items=negItems;r.neg_benefits=(negBenefits||[]).filter(b=>!b.isHeader);r.final_offer=negTotal||0;r.neg_pkg_idx=_negPkgIdx;
@@ -3124,7 +3222,7 @@ function saveRecord(){
       // Đã điền offer → Đã offer (chờ duyệt)
       if(['received','reviewing'].includes(autoStage)) autoStage='offered';
     }
-    const newRec={id:uid(),org,event,school:document.getElementById('f_school').value.trim(),event_type:document.getElementById('f_event_type').value,final_attendance:document.getElementById('f_final_attendance').value.trim(),event_budget:document.getElementById('f_event_budget').value.trim(),prize_structure:document.getElementById('f_prize_structure').value.trim(),activity_list:document.getElementById('f_activity_list').value.trim(),event_budget_chain:document.getElementById('f_event_budget_chain').value.trim(),track:document.getElementById('f_track').value,cat:document.getElementById('f_cat').value,stage:autoStage,year:document.getElementById('f_year').value,receivedDate:document.getElementById('f_receivedDate').value,deadlineDate:document.getElementById('f_deadlineDate').value,proposalUrl:document.getElementById('f_proposalUrl').value,hangmuc:getHangmucVal(),contact,phone:document.getElementById('f_phone').value.trim(),zaloGroup:document.getElementById('f_zalo_group').value.trim(),notes:document.getElementById('f_notes').value,proposalText:proposalTextVal,benefits:[],offer:inlineOffer,clbPackages:_extracted.clbPackages||[],approval:_pendingApproval||null,lienhe_status:document.getElementById('f_lienhe_status').value,neg_items:negItems||[],neg_benefits:negBenefits||[],final_offer:negTotal||0,final_offer_type:document.getElementById('f_final_offer_type').value,final_offer_note:document.getElementById('f_final_offer_note').value,contract_status:document.getElementById('f_contract_status').value,contract_method:document.getElementById('f_contract_method').value,signing_date:document.getElementById('f_signing_date').value,contract_link:document.getElementById('f_contract_link').value,contract_note:document.getElementById('f_contract_note').value,hopdong:document.getElementById('f_hopdong').value.trim(),mavoucher:document.getElementById('f_mavoucher').value.trim(),hanvoucher:document.getElementById('f_hanvoucher').value,voucher_print_qty:document.getElementById('f_voucher_print_qty').value,voucher_status:document.getElementById('f_voucher_status').value,anhsukien:document.getElementById('f_anhsukien').value.trim(),data:document.getElementById('f_data').value.trim(),tracking:document.getElementById('f_tracking').value.trim(),username:document.getElementById('f_username').value.trim(),password:document.getElementById('f_password').value.trim(),expiry:document.getElementById('f_expiry').value,test_platform:document.getElementById('f_test_platform').value,test_account_type:document.getElementById('f_test_account_type').value.trim(),test_offer_note:document.getElementById('f_test_offer_note').value.trim()};
+    const newRec={id:uid(),org,event,school:document.getElementById('f_school').value.trim(),school_abbrev:document.getElementById('f_school_abbrev').value.trim().toUpperCase(),event_type:document.getElementById('f_event_type').value,final_attendance:document.getElementById('f_final_attendance').value.trim(),event_budget:document.getElementById('f_event_budget').value.trim(),prize_structure:document.getElementById('f_prize_structure').value.trim(),activity_list:document.getElementById('f_activity_list').value.trim(),event_budget_chain:document.getElementById('f_event_budget_chain').value.trim(),track:document.getElementById('f_track').value,cat:document.getElementById('f_cat').value,stage:autoStage,year:document.getElementById('f_year').value,receivedDate:document.getElementById('f_receivedDate').value,deadlineDate:document.getElementById('f_deadlineDate').value,proposalUrl:document.getElementById('f_proposalUrl').value,hangmuc:getHangmucVal(),contact,phone:document.getElementById('f_phone').value.trim(),zaloGroup:document.getElementById('f_zalo_group').value.trim(),notes:document.getElementById('f_notes').value,proposalText:proposalTextVal,benefits:[],offer:inlineOffer,clbPackages:_extracted.clbPackages||[],approval:_pendingApproval||null,lienhe_status:document.getElementById('f_lienhe_status').value,neg_items:negItems||[],neg_benefits:negBenefits||[],final_offer:negTotal||0,final_offer_type:document.getElementById('f_final_offer_type').value,final_offer_note:document.getElementById('f_final_offer_note').value,contract_status:document.getElementById('f_contract_status').value,contract_method:document.getElementById('f_contract_method').value,signing_date:document.getElementById('f_signing_date').value,contract_link:document.getElementById('f_contract_link').value,contract_note:document.getElementById('f_contract_note').value,hopdong:document.getElementById('f_hopdong').value.trim(),mavoucher:document.getElementById('f_mavoucher').value.trim(),hanvoucher:document.getElementById('f_hanvoucher').value,voucher_print_qty:document.getElementById('f_voucher_print_qty').value,voucher_status:document.getElementById('f_voucher_status').value,anhsukien:document.getElementById('f_anhsukien').value.trim(),data:document.getElementById('f_data').value.trim(),tracking:document.getElementById('f_tracking').value.trim(),username:document.getElementById('f_username').value.trim(),password:document.getElementById('f_password').value.trim(),expiry:document.getElementById('f_expiry').value,test_platform:document.getElementById('f_test_platform').value,test_account_type:document.getElementById('f_test_account_type').value.trim(),test_offer_note:document.getElementById('f_test_offer_note').value.trim()};
     newRec.roomSponsorships=_roomDraft.filter(e=>e.date||e.purpose||(e.rooms&&e.rooms.some(rm=>rm.capacity)));
     if(_mapsReviewDraft.qty>0)newRec.mapsReview={qty:_mapsReviewDraft.qty,perMap:[..._mapsReviewDraft.perMap]};
     newRec.updatedAt=new Date().toISOString();
