@@ -540,7 +540,7 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           <div class="form-row"><label>Ngày ký HĐ / Bàn giao voucher</label>
             <input id="f_signing_date" type="date" oninput="syncHandoverDate(this.value)"></div>
           <div class="form-row"><label>Link hợp đồng</label>
-            <input id="f_contract_link" placeholder="Link Google Drive hợp đồng"></div>
+            <input id="f_contract_link" placeholder="Link Google Drive hợp đồng" oninput="const hd=document.getElementById('f_hopdong');if(hd)hd.value=this.value;"></div>
         </div>
         <div class="form-row"><label>Ghi chú hợp đồng</label>
           <input id="f_contract_note" placeholder="VD: Đã gửi hợp đồng qua email, chờ bên kia ký..."></div>
@@ -1767,6 +1767,11 @@ function rpToggleZalo(val){
 function modalToggleZalo(val){
   const row=document.getElementById('modal_zalo_row');
   if(row)row.style.display=(val==='zalo'?'':'none');
+  // fb07: Chọn "Đã tạo Zalo" → tự chuyển stage sang "Đang xét" nếu đang ở Mới nhận
+  if(val==='zalo'){
+    const stageSel=document.getElementById('f_stage');
+    if(stageSel&&stageSel.value==='received')stageSel.value='reviewing';
+  }
 }
 
 // ══ CALCULATOR ══
@@ -2762,6 +2767,10 @@ function switchModalTab(tab){
   if(tab==='exec'){
     const r=_editId?loadAll().find(x=>x.id===_editId):null;
     renderMapsReviewExecBox(r);
+    // fb16: Auto-sync trường Hợp đồng từ tab Hợp đồng sang tab Thực thi
+    const contractLink=document.getElementById('f_contract_link');
+    const hopdong=document.getElementById('f_hopdong');
+    if(hopdong&&contractLink&&!hopdong.value&&contractLink.value)hopdong.value=contractLink.value;
   }
   if(tab==='proposal') updateModalForTrack();
 }

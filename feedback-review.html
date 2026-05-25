@@ -297,6 +297,12 @@ const DONE_DEFAULTS = {
          ghi_chu:'✅ Thêm trường "Tên Trường / Đại học" (f_school).\nForm: row mới sau org/event. Load/Save/Reset đầy đủ. Hiển thị dưới tên CLB (🏫). Tìm kiếm được trong search.\nCommit: feat: fb04 add school field'},
   fb14: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
          ghi_chu:'✅ Recap đàm phán đổi từ div rows sang <table> 4 cột: Loại voucher | SL | Giá trị tối đa | Thành tiền.\nCash rows hiện "Hiện kim" với dấu — ở cột SL và Giá trị tối đa.\nCommit: feat: fb14 negotiation recap as table'},
+  fb07: {status:'hoan_thanh', loai:'tinh_nang', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Khi chọn "Đã tạo Zalo" trong modalToggleZalo(), tự động chuyển f_stage từ "received" → "reviewing" (Đang xét).\nChỉ áp dụng khi đang ở Mới nhận — không downgrade stage cao hơn.\nCommit: feat: fb07 auto-stage to reviewing when Zalo'},
+  fb16: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'trung_binh',
+         ghi_chu:'✅ Hai điểm đồng bộ:\n1. switchModalTab("exec") tự fill f_hopdong từ f_contract_link nếu f_hopdong còn trống.\n2. f_contract_link có oninput → real-time sync sang f_hopdong.\nCommit: feat: fb16 sync contract link to hopdong'},
+  fb05: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'trung_binh',
+         ghi_chu:'✅ Đã giải quyết bằng auto-sync email (setInterval 3 phút fetch GAS). Hồ sơ từ email tự xuất hiện trong "Mới nhận" mà không cần nhân sự cập nhật thủ công.\nKhông cần bỏ trạng thái — trạng thái vẫn hữu ích để phân biệt hồ sơ chưa xử lý.'},
 };
 
 let STATE = loadState(); // {fb01: {status, loai, kha_thi, uu_tien, ghi_chu}, ...}
