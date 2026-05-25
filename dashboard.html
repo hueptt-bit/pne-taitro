@@ -2195,7 +2195,7 @@ function initOfferBuilder(){
         _extracted.clbPackages=r.clbPackages;
       if(!_pendingApproval&&r.approval)
         _pendingApproval={...r.approval};
-      // If still no packages but have raw proposalText → re-parse silently
+      // If still no packages but have raw proposalText → re-parse silently for offer builder
       if(!(_extracted.clbPackages&&_extracted.clbPackages.length)&&r.proposalText){
         const saved=document.getElementById('f_proposalText').value;
         document.getElementById('f_proposalText').value=r.proposalText;
@@ -2895,7 +2895,16 @@ function switchModalTab(tab){
     const hopdong=document.getElementById('f_hopdong');
     if(hopdong&&contractLink&&!hopdong.value&&contractLink.value)hopdong.value=contractLink.value;
   }
-  if(tab==='proposal') updateModalForTrack();
+  if(tab==='proposal'){
+    updateModalForTrack();
+    // Khi mở lại hồ sơ đã phân tích: re-parse để hiện extractResult panel
+    if(_editId){
+      const ptEl=document.getElementById('f_proposalText');
+      if(ptEl&&ptEl.value.length>20){
+        parseProposal(); // repopulates extractFields + sets extractResult display:block
+      }
+    }
+  }
 }
 function openAddModal(id){
   _editId=id||null;window._pendingBenefits=null;_pendingApproval=null;_offerInlineDraft=[];
@@ -2987,6 +2996,12 @@ function openAddModal(id){
 }
 function closeAddModal(){document.getElementById('addModal').style.display='none';_editId=null;}
 function saveRecord(){
+  // Nếu form chưa điền org/event mà đã phân tích hồ sơ → tự apply toàn bộ extracted data
+  if(_extracted&&(_extracted.org||_extracted.event)){
+    const orgEmpty=!document.getElementById('f_org').value.trim();
+    const evtEmpty=!document.getElementById('f_event').value.trim();
+    if(orgEmpty||evtEmpty) applyExtracted();
+  }
   const org=document.getElementById('f_org').value.trim();const event=document.getElementById('f_event').value.trim();
   if(!org||!event){showToast('⚠️ Vui lòng nhập tên CLB và tên sự kiện','warn');return;}
   const a=loadAll();
