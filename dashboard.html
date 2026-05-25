@@ -467,7 +467,7 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           <select id="f_lienhe_status" onchange="modalToggleZalo(this.value)">
             <option value="moi">🆕 Mới nhận</option>
             <optgroup label="── Kết quả ──">
-              <option value="zalo">💬 Đã tạo Zalo</option>
+              <option value="zalo">💬 Đã có Zalo</option>
               <option value="khong_phan_hoi">🚫 Không phản hồi</option>
             </optgroup>
           </select>
@@ -1027,8 +1027,9 @@ function addLog(type,detail){
   if(logs.length>500)logs.length=500;
   saveLogs(logs);
 }
-const LIENHE_MAP={moi:{c:'#0ea5e9',bg:'#e0f2fe',t:'Mới nhận',icon:'🆕'},zalo:{c:'#16a34a',bg:'#dcfce7',t:'Đã Zalo',icon:'💬'},khong_phan_hoi:{c:'#dc2626',bg:'#fee2e2',t:'Không phản hồi',icon:'🚫'},lien_he:{c:'#f59e0b',bg:'#fef3c7',t:'Đã phản hồi mail',icon:'✉️'}};
+const LIENHE_MAP={moi:{c:'#0ea5e9',bg:'#e0f2fe',t:'Mới nhận',icon:'🆕'},zalo:{c:'#16a34a',bg:'#dcfce7',t:'Đã có Zalo',icon:'💬'},khong_phan_hoi:{c:'#dc2626',bg:'#fee2e2',t:'Không phản hồi',icon:'🚫'},lien_he:{c:'#f59e0b',bg:'#fef3c7',t:'Đã phản hồi mail',icon:'✉️'}};
 const LIENHE_CYCLE=['moi','zalo','khong_phan_hoi'];
+const LIENHE_SHOW_STAGES=new Set(['received','reviewing']); // chỉ hiện badge ở 2 stage đầu
 function lienheInfo(val){return LIENHE_MAP[val]||LIENHE_MAP.moi;}
 function cycleLienhe(id,e){e.stopPropagation();const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;const cur=r.lienhe_status||'moi';const idx=LIENHE_CYCLE.indexOf(cur);r.lienhe_status=LIENHE_CYCLE[(idx+1)%LIENHE_CYCLE.length];r.updatedAt=new Date().toISOString();saveAll(a);if(ST.view==='kanban')renderKanban();else if(ST.view==='list')renderList();if(ST.selId===id)renderPanel();}
 function fmtMoney(n){if(!n||n==0)return'—';if(n>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n+'';}
@@ -1366,7 +1367,7 @@ function renderKanban(){
                     <div class="kb-card-org">${r.org}</div>
                     <div class="kb-card-event">${r.event}</div>
                     ${rdFmt?`<div style="font-size:10.5px;color:#94a3b8;margin-top:2px">📥 Nhận: ${rdFmt}</div>`:''}
-                    ${(()=>{const li=lienheInfo(r.lienhe_status||r.lienhe||'moi');return`<button onclick="cycleLienhe('${r.id}',event)" title="Click để đổi trạng thái liên hệ" style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;background:${li.bg};color:${li.c};border:1px solid ${li.c}44;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s">${li.icon} ${li.t}</button>`;})()}
+                    ${LIENHE_SHOW_STAGES.has(r.stage)?(()=>{const li=lienheInfo(r.lienhe_status||r.lienhe||'moi');return`<button onclick="cycleLienhe('${r.id}',event)" title="Click để đổi trạng thái liên hệ" style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;background:${li.bg};color:${li.c};border:1px solid ${li.c}44;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s">${li.icon} ${li.t}</button>`;})():''}
                   </div>
                   ${hasNext?`<button onclick="advanceStage('${r.id}',event)" title="Chuyển sang: ${STAGES[stIdx+1].label}" style="flex-shrink:0;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#f8fafc;color:#475569;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='${STAGES[stIdx+1].color}';this.style.color='#fff';this.style.borderColor='${STAGES[stIdx+1].color}'" onmouseout="this.style.background='#f8fafc';this.style.color='#475569';this.style.borderColor='var(--border)'">→</button>`:''}
                 </div>
@@ -1440,7 +1441,7 @@ function renderList(){
     h+=`<tr class="data-row${ST.selId===r.id?' selected':''}" onclick="toggleRow('${r.id}')">
       <td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" ${isChecked?'checked':''} onchange="toggleSelectOne('${r.id}',this.checked)" style="cursor:pointer;width:15px;height:15px"></td>
       <td style="color:#94a3b8;padding-left:14px;font-size:11px">${exp?'▾':'▸'}</td>
-      <td><div style="font-weight:600">${r.org}</div>${(()=>{const lm=lienheInfo(r.lienhe_status||r.lienhe||'moi');return`<span style="display:inline-block;background:${lm.bg};color:${lm.c};font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;margin-top:2px">${lm.icon} ${lm.t}</span>`;})()}${r.school?`<div style="font-size:10px;color:#94a3b8;margin-top:1px">🏫 ${r.school}</div>`:''}${(s=>{if(!s)return'';const iso=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);let fmt=iso?`${iso[3]}/${iso[2]}/${iso[1]}`:'';if(!fmt){try{const dt=new Date(s);if(!isNaN(dt))fmt=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;}catch{}}return fmt?`<div style="font-size:10px;color:#94a3b8;margin-top:1px">📥 ${fmt}</div>`:''})(r.receivedDate)}${bp.total>0?`<div style="font-size:11px;color:#94a3b8;margin-top:1px">${bp.done}/${bp.total} QLL</div>`:''}</td>
+      <td><div style="font-weight:600">${r.org}</div>${LIENHE_SHOW_STAGES.has(r.stage)?(()=>{const lm=lienheInfo(r.lienhe_status||r.lienhe||'moi');return`<span style="display:inline-block;background:${lm.bg};color:${lm.c};font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;margin-top:2px">${lm.icon} ${lm.t}</span>`;})():''}${r.school?`<div style="font-size:10px;color:#94a3b8;margin-top:1px">🏫 ${r.school}</div>`:''}${(s=>{if(!s)return'';const iso=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);let fmt=iso?`${iso[3]}/${iso[2]}/${iso[1]}`:'';if(!fmt){try{const dt=new Date(s);if(!isNaN(dt))fmt=`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;}catch{}}return fmt?`<div style="font-size:10px;color:#94a3b8;margin-top:1px">📥 ${fmt}</div>`:''})(r.receivedDate)}${bp.total>0?`<div style="font-size:11px;color:#94a3b8;margin-top:1px">${bp.done}/${bp.total} QLL</div>`:''}</td>
       <td style="color:#475569">${r.event}</td>
       <td><span style="background:#f1f5f9;color:#475569;padding:2px 7px;border-radius:4px;font-size:12px">${r.cat||'—'}</span>${(()=>{const em={cuoc_thi:{i:'🏆',c:'#d97706',bg:'#fef3c7'},chuoi_ct:{i:'📅',c:'#6366f1',bg:'#ede9fe'},su_kien_don:{i:'🎪',c:'#0891b2',bg:'#cffafe'}};const e=em[r.event_type];return e?`<span style="display:inline-block;background:${e.bg};color:${e.c};font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:4px">${e.i}</span>`:'';})()}</td>
       <td><span class="stage-badge" style="background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
@@ -1618,7 +1619,7 @@ function renderPanel(){
       <select id="rp_lienhe_sel" onchange="updateField('${r.id}','lienhe_status',this.value);rpToggleZalo(this.value)">
         <option value="moi"${(r.lienhe_status||r.lienhe||'moi')==='moi'?' selected':''}>🆕 Mới nhận</option>
         <optgroup label="── Kết quả ──">
-          <option value="zalo"${(r.lienhe_status||r.lienhe)==='zalo'?' selected':''}>💬 Đã tạo Zalo</option>
+          <option value="zalo"${(r.lienhe_status||r.lienhe)==='zalo'?' selected':''}>💬 Đã có Zalo</option>
           <option value="khong_phan_hoi"${(r.lienhe_status||r.lienhe)==='khong_phan_hoi'?' selected':''}>🚫 Không phản hồi</option>
         </optgroup>
       </select>
