@@ -2724,15 +2724,16 @@ function parseProposal(){
   const result={};
 
   // === CLB / Đơn vị tổ chức ===
-  let orgM=text.match(/(?:\*{1,2})?(?:Đơn vị tổ chức|Tên CLB|Tên tổ chức|Tổ chức)[:\s*]+([^\n*]{3,80})/i);
-  if(!orgM)orgM=text.match(/(?:CLB|Câu lạc bộ)\s+([^\n,\.–—*]{3,60})/i);
+  // Stop trước các label phổ biến tiếp theo để không bắt nhầm field kế
+  const ORG_STOP='(?=\\s*(?:Thời gian|Địa điểm|Quy mô|Tổng chi phí|Hình thức|Mục tiêu|===|\\n|$))';
+  let orgM=text.match(new RegExp('(?:\\*{1,2})?(?:Đơn vị tổ chức|Tên CLB|Tên tổ chức|Tổ chức)[:\\s*]+([^\\n*]{3,60}?)'+ORG_STOP,'i'));
+  if(!orgM)orgM=text.match(/(?:CLB|Câu lạc bộ)\s+([^\n,\.–—*:]{3,50})(?=\s*[\n\r]|$)/i);
   if(orgM){result.org=orgM[1].trim().replace(/\*+/g,'').replace(/\s+–.*$/,'').trim();}
 
   // === Tên sự kiện — lấy từ tiêu đề in đậm hoặc dòng heading đầu tiên ===
   // Ưu tiên text trong ** ** ở đầu file (thường là tên show)
   const boldMatches=[...text.matchAll(/\*{2}([^*\n]{10,120})\*{2}/g)];
   if(boldMatches.length){
-    // Tìm cái đầu tiên trông như tên sự kiện (không phải label)
     for(const m of boldMatches){
       const t=m[1].trim();
       if(!/^(?:Đơn vị|Tổ chức|Thời gian|Địa điểm|Quy mô|Tổng|Mục đích|Ý nghĩa|Mục tiêu|Gói|Email|SĐT)/i.test(t)){
@@ -2741,7 +2742,8 @@ function parseProposal(){
     }
   }
   if(!result.event){
-    let evM=text.match(/(?:tên chương trình|chương trình|sự kiện)[:\s]+([^\n]{5,80})/i);
+    // Chỉ match khi có label rõ ràng "Tên chương trình:" hoặc "Tên sự kiện:" — tránh bắt nhầm câu body
+    let evM=text.match(/(?:Tên chương trình|Tên sự kiện|Chương trình)[:\s*]+([^\n]{5,100})/i);
     if(evM)result.event=evM[1].trim().replace(/\*+/g,'');
   }
 
