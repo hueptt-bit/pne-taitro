@@ -952,6 +952,7 @@ let _negPkgIdx=0;      // index gói CLB đang deal (voucher track)
 let _negTestPkgIdx=null; // index gói Test Online đang chọn
 let _roomDraft=[]; // [{id,date,purpose,rooms:[{id,capacity}]}] — room sponsorship bookings
 let _mapsReviewDraft={qty:0,perMap:[0,0,0]}; // Google Maps review deal — perMap indexed by MAPS_REVIEW_TARGETS
+let _expandedPkgBenefits=new Set(); // track gói nào đang mở rộng danh sách quyền lợi
 
 // ══ DATA ══
 function loadAll(){try{return JSON.parse(localStorage.getItem(KEY_S)||'[]');}catch(e){return[];}}
@@ -1029,6 +1030,8 @@ function filtered(){
   if(ST.approvalFilter)a=a.filter(r=>needsApproval(r));
   else if(ST.stageFilter)a=a.filter(r=>r.stage===ST.stageFilter);
   if(ST.search){const q=ST.search.toLowerCase();a=a.filter(r=>(r.org||'').toLowerCase().includes(q)||(r.event||'').toLowerCase().includes(q)||(r.cat||'').toLowerCase().includes(q));}
+  // Mặc định: mới nhận lên đầu (sort theo receivedDate desc, fallback theo id desc)
+  if(!ST.sortCol){a.sort((x,y)=>{const dx=x.receivedDate||'';const dy=y.receivedDate||'';if(dy!==dx)return dy>dx?1:-1;return y.id>x.id?1:-1;});}
   return a;
 }
 
@@ -2103,9 +2106,8 @@ function renderOfferBuilder(){
             <span style="font-weight:700;font-size:13px">${PKG_EMOJI[i]||'📦'} Gói ${p.name}</span>
             <span style="font-weight:800;font-size:14px;color:var(--acc)">${fmtMoneyFull(p.value)}</span>
           </div>
-          ${p.benefits.length?`<div style="font-size:11px;color:var(--tx2);line-height:1.7">
-            ${p.benefits.slice(0,5).map(b=>`<span style="margin-right:8px">✓ ${b.text}${b.value!=='✓'?' <em style=color:var(--tx3)>('+b.value+')</em>':''}</span>`).join('')}
-            ${p.benefits.length>5?`<span style="color:var(--tx3)">+${p.benefits.length-5} khác…</span>`:''}
+          ${p.benefits.length?`<div style="font-size:11px;color:var(--tx2);line-height:1.7" id="pkgBenList_${i}">
+            ${(()=>{const exp=_expandedPkgBenefits.has(i);const shown=exp?p.benefits:p.benefits.slice(0,5);return shown.map(b=>`<span style="margin-right:8px">✓ ${b.text}${b.value!=='✓'?' <em style=color:var(--tx3)>('+b.value+')</em>':''}</span>`).join('')+(p.benefits.length>5?`<button onclick="togglePkgBenefits(${i})" style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:11px;padding:0;margin-left:4px;font-weight:600">${exp?'▲ Thu gọn':'▼ +'+( p.benefits.length-5)+' quyền lợi khác'}</button>`:'');})()}
           </div>`:''}
         </div>`).join('')+`</div>`;
     }else{
@@ -2174,6 +2176,11 @@ function updateOfferInlineTotal(){
   if(el)el.textContent=fmtMoneyFull(total);
   renderOfferRecap(total);
 }
+function togglePkgBenefits(i){
+  if(_expandedPkgBenefits.has(i)) _expandedPkgBenefits.delete(i);
+  else _expandedPkgBenefits.add(i);
+  renderOfferBuilder();
+}
 function renderOfferRecap(total){
   const el=document.getElementById('offerRecapBody');
   if(!el)return;
@@ -2205,7 +2212,7 @@ function renderOfferRecap(total){
     <thead><tr style="border-bottom:1.5px solid var(--border)">
       <th style="text-align:left;font-size:11px;font-weight:600;color:var(--tx3);padding:0 8px 5px 0;text-transform:uppercase;letter-spacing:.4px">Voucher</th>
       <th style="text-align:center;font-size:11px;font-weight:600;color:var(--tx3);padding:0 6px 5px;text-transform:uppercase;letter-spacing:.4px">SL</th>
-      <th style="text-align:right;font-size:11px;font-weight:600;color:var(--tx3);padding:0 6px 5px;text-transform:uppercase;letter-spacing:.4px">Mệnh giá</th>
+      <th style="text-align:right;font-size:11px;font-weight:600;color:var(--tx3);padding:0 6px 5px;text-transform:uppercase;letter-spacing:.4px">Giá trị tối đa</th>
       <th style="text-align:right;font-size:11px;font-weight:600;color:var(--tx3);padding:0 0 5px 6px;text-transform:uppercase;letter-spacing:.4px">Thành tiền</th>
     </tr></thead>
     <tbody>${itemTableRows}</tbody>
@@ -3174,7 +3181,15 @@ function renderNegItems(){
     let html='';
     if(hasItems){
       html+=`<div style="font-weight:700;color:var(--tx);margin-bottom:6px">💰 Gói tài trợ</div>`;
-      _negDraft.items.forEach(item=>{
+      // Sort voucher từ giá trị lớn → nhỏ (hiện kim xuống cuối)
+      const sortedItems=[..._negDraft.items].sort((a,b)=>{
+        const va=a.isCash?+a.cashVal||0:(+a.qty||0)*(+a.maxVal||0);
+        const vb=b.isCash?+b.cashVal||0:(+b.qty||0)*(+b.maxVal||0);
+        if(a.isCash&&!b.isCash)return 1;
+        if(!a.isCash&&b.isCash)return -1;
+        return vb-va;
+      });
+      sortedItems.forEach(item=>{
         const val=item.isCash?+item.cashVal||0:(+item.qty||0)*(+item.maxVal||0);
         if(val<=0&&!item.isCash)return;
         html+=`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--border)">
