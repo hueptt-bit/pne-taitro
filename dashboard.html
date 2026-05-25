@@ -990,15 +990,24 @@ async function syncFromGAS(silent=false){
       const allDeleted   = new Set([...localDeleted, ...gasDeleted]);
       if(gasDeleted.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDeleted]));
       let newCount=0, updatedCount=0;
+      // Các field lớn GAS có thể không lưu được (Sheets cell limit) → giữ local nếu GAS rỗng
+      const LOCAL_ONLY_FIELDS=['proposalText','clbPackages','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
       data.records.forEach(gasRec=>{
         if(allDeleted.has(gasRec.id)) return;
         const localRec=localMap.get(gasRec.id);
         if(!localRec){ localMap.set(gasRec.id,gasRec); newCount++; }
         else{
-          // Manual sync: GAS luôn thắng — không cần so updatedAt
-          // (tránh trường hợp GAS không trả updatedAt → local bao giờ cũng thắng)
-          if(JSON.stringify(localRec)!==JSON.stringify(gasRec)){
-            localMap.set(gasRec.id,gasRec); updatedCount++;
+          // GAS thắng tất cả các field — nhưng giữ local cho field lớn nếu GAS trả về rỗng
+          const merged={...localRec,...gasRec};
+          LOCAL_ONLY_FIELDS.forEach(f=>{
+            const gasVal=gasRec[f];
+            const localVal=localRec[f];
+            const gasEmpty=!gasVal||(Array.isArray(gasVal)&&gasVal.length===0)||(typeof gasVal==='string'&&gasVal.trim()==='');
+            const localHas=localVal&&(Array.isArray(localVal)?localVal.length>0:String(localVal).trim()!=='');
+            if(gasEmpty&&localHas) merged[f]=localVal;
+          });
+          if(JSON.stringify(localRec)!==JSON.stringify(merged)){
+            localMap.set(gasRec.id,merged); updatedCount++;
           }
         }
       });
@@ -4274,6 +4283,7 @@ function _autoSyncPull(){
       const allDel   = new Set([...localDel,...gasDel]);
       if(gasDel.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDel]));
       let newCount=0, updatedCount=0;
+      const _LOCAL_FIELDS=['proposalText','clbPackages','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
       data.records.forEach(gasRec=>{
         if(allDel.has(gasRec.id)) return;
         const localRec=localMap.get(gasRec.id);
@@ -4282,7 +4292,14 @@ function _autoSyncPull(){
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
           if(tGas>tLocal || (tGas>0&&tLocal===0) || (tGas===tLocal&&tGas>0)){
-            localMap.set(gasRec.id,gasRec); updatedCount++;
+            const merged={...localRec,...gasRec};
+            _LOCAL_FIELDS.forEach(f=>{
+              const gv=gasRec[f];const lv=localRec[f];
+              const ge=!gv||(Array.isArray(gv)&&gv.length===0)||(typeof gv==='string'&&gv.trim()==='');
+              const lh=lv&&(Array.isArray(lv)?lv.length>0:String(lv).trim()!=='');
+              if(ge&&lh) merged[f]=lv;
+            });
+            localMap.set(gasRec.id,merged); updatedCount++;
           }
         }
       });
