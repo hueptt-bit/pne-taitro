@@ -1234,12 +1234,16 @@ function renderVoucherBreakdown(negItems){
   if(!el)return;
   const items=(negItems||[]).filter(i=>!i.isCash&&(+i.qty||0)>0);
   if(!items.length){el.style.display='none';return;}
-  const VTYPE_LABEL={'100%':'100% (9.8M)','80%':'80% (7.84M)','50%':'50% (4.9M)','35%':'35% (3.43M)','30%':'30% (2.94M)','25%':'25% (2.45M)','20%':'20% (1.96M)','15%':'15% (1.47M)','Gấu bông':'Gấu bông (180K)'};
+  const VTYPE_VAL={'100%':'9.8M','80%':'7.84M','50%':'4.9M','35%':'3.43M','30%':'2.94M','25%':'2.45M','20%':'1.96M','15%':'1.47M','Gấu bông':'180K'};
   const total=items.reduce((s,i)=>s+(+i.qty||0),0);
-  const rows=items.map(i=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #d1fae5">
-    <span style="color:#15803d;font-weight:600">${VTYPE_LABEL[i.type]||i.type}</span>
-    <span style="font-weight:700;color:#166534">${i.qty} voucher</span>
-  </div>`).join('');
+  const rows=items.map(i=>{
+    const lbl=i.label||i.type||'?';
+    const val=VTYPE_VAL[lbl]?` (${VTYPE_VAL[lbl]})`:'';
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #d1fae5">
+      <span style="color:#15803d;font-weight:600">${lbl}${val}</span>
+      <span style="font-weight:700;color:#166534">${i.qty} voucher</span>
+    </div>`;
+  }).join('');
   el.innerHTML=`<div style="font-weight:700;color:#15803d;margin-bottom:6px">📦 Chi tiết in theo gói đàm phán</div>${rows}
     <div style="display:flex;justify-content:space-between;padding-top:5px;font-weight:700;color:#14532d">
       <span>Tổng cộng</span><span>${total} voucher</span>
