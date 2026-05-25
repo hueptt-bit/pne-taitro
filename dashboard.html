@@ -3502,6 +3502,16 @@ Thời gian: [dd/mm/yyyy]
 Quy mô: [số lượng người tham gia, ví dụ: 500 sinh viên]
 Tổng chi phí: [số tiền, ví dụ: 45.000.000 VNĐ]
 Hình thức tài trợ: [loại tài trợ CLB mong muốn]
+=== CHI TIẾT CHƯƠNG TRÌNH ===
+Loại hình: [Cuộc thi / Chuỗi chương trình / Sự kiện đơn lẻ / Khác]
+Các hoạt động / chặng chính:
+- [Tên hoạt động hoặc chặng 1]: [mô tả ngắn + số người tham gia nếu có]
+- [Tên hoạt động hoặc chặng 2]: [mô tả ngắn + số người tham gia nếu có]
+(liệt kê tất cả, bỏ trống nếu không đề cập)
+Cơ cấu giải thưởng (nếu là Cuộc thi):
+- [Tên giải]: [giá trị]
+(bỏ mục này nếu không phải Cuộc thi)
+Số người tham dự đêm Chung kết (nếu là Cuộc thi): [số lượng]
 === GÓI TÀI TRỢ ===
 Gói [Tên gói]: [giá trị tối thiểu] VNĐ
 (liệt kê tất cả gói, mỗi gói một dòng)
@@ -3515,7 +3525,8 @@ Gói [Tên gói]: [giá trị tối thiểu] VNĐ
 (lặp lại cho từng gói, thứ tự từ cao đến thấp)
 === THÔNG TIN LIÊN HỆ ===
 **[Họ và tên đầy đủ]** ([Vai trò]) – SĐT: [số điện thoại]
-(liệt kê tất cả đầu mối, mỗi người một dòng)`;
+(liệt kê tất cả đầu mối, mỗi người một dòng)
+Fanpage / Website BTC: [link fanpage hoặc website của ban tổ chức / chương trình, ghi "Không có" nếu không đề cập]`;
 }
 
 function getTestPromptTemplate(){
@@ -3529,11 +3540,19 @@ Quy mô: [số lượng thí sinh / người tham gia]
 Loại kỳ thi / sự kiện: [loại kỳ thi hoặc sự kiện tổ chức trên nền tảng]
 Nền tảng dùng thi: [tên nền tảng CLB đang dùng hoặc muốn dùng, nếu đề cập]
 Hình thức tài trợ: Nhà tài trợ Nền tảng
+=== CHI TIẾT CHƯƠNG TRÌNH ===
+Các vòng thi / chặng chính:
+- [Tên vòng 1]: [số thí sinh + hình thức thi nếu có]
+- [Tên vòng 2]: [số thí sinh + hình thức thi nếu có]
+(liệt kê tất cả vòng, bỏ trống nếu không đề cập)
+Cơ cấu giải thưởng (nếu có):
+- [Tên giải]: [giá trị]
 === QUYỀN LỢI ĐỀ XUẤT ===
 (liệt kê các quyền lợi CLB đề xuất dành cho nhà tài trợ nền tảng, mỗi quyền lợi một dòng có dấu gạch đầu)
 === THÔNG TIN LIÊN HỆ ===
 **[Họ và tên đầy đủ]** ([Vai trò]) – SĐT: [số điện thoại]
-(liệt kê tất cả đầu mối, mỗi người một dòng)`;
+(liệt kê tất cả đầu mối, mỗi người một dòng)
+Fanpage / Website BTC: [link fanpage hoặc website của ban tổ chức / chương trình, ghi "Không có" nếu không đề cập]`;
 }
 
 const TEST_PLATFORM_LABELS={

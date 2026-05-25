@@ -303,6 +303,10 @@ const DONE_DEFAULTS = {
          ghi_chu:'✅ Hai điểm đồng bộ:\n1. switchModalTab("exec") tự fill f_hopdong từ f_contract_link nếu f_hopdong còn trống.\n2. f_contract_link có oninput → real-time sync sang f_hopdong.\nCommit: feat: fb16 sync contract link to hopdong'},
   fb05: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'trung_binh',
          ghi_chu:'✅ Đã giải quyết bằng auto-sync email (setInterval 3 phút fetch GAS). Hồ sơ từ email tự xuất hiện trong "Mới nhận" mà không cần nhân sự cập nhật thủ công.\nKhông cần bỏ trạng thái — trạng thái vẫn hữu ích để phân biệt hồ sơ chưa xử lý.'},
+  fb08: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Thêm section "=== CHI TIẾT CHƯƠNG TRÌNH ===" vào cả 2 prompt (Voucher + Test).\nVoucher: Loại hình + Hoạt động/chặng + Cơ cấu giải (Cuộc thi) + Số người Chung kết.\nTest: Các vòng thi/chặng + Cơ cấu giải.\nCommit: feat: fb08+fb15 improve prompt templates'},
+  fb15: {status:'hoan_thanh', loai:'tinh_nang', kha_thi:'de', uu_tien:'trung_binh',
+         ghi_chu:'✅ Thêm dòng "Fanpage / Website BTC" vào cuối section THÔNG TIN LIÊN HỆ của cả 2 prompt.\nAI sẽ tự trích xuất link nếu có trong hồ sơ, ghi "Không có" nếu không đề cập.\nCommit: feat: fb08+fb15 improve prompt templates'},
   fb17: {status:'hoan_thanh', loai:'tinh_nang', kha_thi:'de', uu_tien:'trung_binh',
          ghi_chu:'✅ Thêm dropdown "Loại hình sự kiện" (Cuộc thi / Chuỗi CT / Sự kiện đơn / Khác).\nCuộc thi: hiện block vàng với Số người Chung kết + Chi phí dự trù + Cơ cấu giải thưởng.\nChuỗi CT: hiện block tím với Số người từng hoạt động + Chi phí dự trù.\nIcon badge 🏆/📅/🎪 hiển thị trong danh sách.\nCommit: feat: fb17 event type fields'},
 };
