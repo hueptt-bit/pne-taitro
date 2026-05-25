@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PNE — Review Platform Tracker</title>
+<style>
+  :root {
+    --bg: #0f1117; --sb: #161b22; --sb2: #1c2333; --sb3: #30363d;
+    --tx: #e6edf3; --tx2: #8b949e; --tx3: #6e7681;
+    --acc: #7c3aed; --acc2: #6d28d9;
+    --red: #f87171; --green: #34d399; --yellow: #fbbf24; --blue: #60a5fa; --purple: #a78bfa; --orange: #fb923c;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--tx); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13.5px; min-height: 100vh; }
+
+  /* ── TOP BAR ── */
+  .topbar { background: var(--sb); border-bottom: 1px solid var(--sb3); padding: 0 24px; height: 54px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  .topbar-logo { font-weight: 800; font-size: 15px; color: var(--acc); letter-spacing: -0.3px; }
+  .topbar-title { font-size: 13px; color: var(--tx2); }
+  .topbar-sep { width: 1px; height: 20px; background: var(--sb3); }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .badge-stat { background: var(--sb2); border: 1px solid var(--sb3); border-radius: 20px; padding: 3px 12px; font-size: 12px; color: var(--tx2); display: flex; align-items: center; gap: 6px; }
+  .badge-stat strong { color: var(--tx); }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; height: calc(100vh - 54px); }
+  .sidebar { width: 220px; min-width: 220px; background: var(--sb); border-right: 1px solid var(--sb3); padding: 16px 0; overflow-y: auto; }
+  .main { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+  /* ── SIDEBAR NAV ── */
+  .nav-section { padding: 0 12px 4px; font-size: 10.5px; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.8px; margin-top: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 16px; cursor: pointer; border-radius: 0; font-size: 12.5px; color: var(--tx2); transition: background .12s; }
+  .nav-item:hover { background: var(--sb2); color: var(--tx); }
+  .nav-item.active { background: var(--sb2); color: var(--acc); border-left: 2px solid var(--acc); }
+  .nav-count { margin-left: auto; background: var(--sb3); border-radius: 10px; padding: 1px 7px; font-size: 11px; color: var(--tx3); }
+  .nav-count.has { background: #7c3aed33; color: var(--purple); }
+
+  /* ── FILTERS ── */
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-pill { background: var(--sb2); border: 1px solid var(--sb3); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--tx2); cursor: pointer; transition: all .12s; white-space: nowrap; }
+  .filter-pill:hover { border-color: var(--acc); color: var(--tx); }
+  .filter-pill.active { background: #7c3aed22; border-color: var(--acc); color: var(--acc); }
+  .filter-sep { width: 1px; height: 20px; background: var(--sb3); }
+  .search-box { background: var(--sb2); border: 1px solid var(--sb3); border-radius: 8px; padding: 5px 10px; color: var(--tx); font-size: 12.5px; width: 200px; outline: none; }
+  .search-box:focus { border-color: var(--acc); }
+  .search-box::placeholder { color: var(--tx3); }
+
+  /* ── STATS GRID ── */
+  .stat-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .stat-card { flex: 1; background: var(--sb); border: 1px solid var(--sb3); border-radius: var(--radius); padding: 14px 16px; }
+  .stat-num { font-size: 24px; font-weight: 800; }
+  .stat-label { font-size: 11.5px; color: var(--tx2); margin-top: 2px; }
+  .stat-bar { height: 3px; border-radius: 2px; margin-top: 10px; background: var(--sb3); overflow: hidden; }
+  .stat-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+
+  /* ── FEEDBACK CARD ── */
+  .section-title { font-size: 12px; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--sb3); }
+
+  .card { background: var(--sb); border: 1px solid var(--sb3); border-radius: var(--radius); margin-bottom: 8px; transition: border-color .15s; }
+  .card:hover { border-color: var(--sb3); }
+  .card.expanded { border-color: var(--acc); }
+
+  .card-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; cursor: pointer; }
+  .card-num { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-title { font-weight: 600; font-size: 13px; color: var(--tx); line-height: 1.4; }
+  .card-meta { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+  .card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .chevron { color: var(--tx3); transition: transform .2s; font-size: 10px; }
+  .card.expanded .chevron { transform: rotate(180deg); }
+
+  /* ── TAGS ── */
+  .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .tag-buoc { background: #1e293b; color: var(--blue); }
+  .tag-nhom { background: var(--sb2); color: var(--tx2); border: 1px solid var(--sb3); }
+
+  /* Loại */
+  .tag-bug      { background: #fca5a520; color: #fca5a5; }
+  .tag-cai_tien { background: #fbbf2420; color: #fbbf24; }
+  .tag-tinh_nang{ background: #34d39920; color: #34d399; }
+  .tag-ha_tang  { background: #60a5fa20; color: #60a5fa; }
+
+  /* Khả thi */
+  .tag-de         { background: #34d39920; color: #34d399; }
+  .tag-trung_binh { background: #fbbf2420; color: #fbbf24; }
+  .tag-kho        { background: #fb923c20; color: #fb923c; }
+  .tag-khong_kha_thi { background: #f8717120; color: #f87171; }
+
+  /* Ưu tiên */
+  .tag-cao        { background: #f8717120; color: #f87171; }
+  .tag-thap       { background: #6e768120; color: #6e7681; }
+
+  /* Status */
+  .tag-chua_xet   { background: #30363d; color: var(--tx3); }
+  .tag-dang_xet   { background: #1e3a5f; color: #60a5fa; }
+  .tag-ke_hoach   { background: #3b1f6e; color: #a78bfa; }
+  .tag-dang_lam   { background: #1a3d2b; color: #34d399; }
+  .tag-hoan_thanh { background: #14532d; color: #4ade80; }
+  .tag-bo_qua     { background: #1c1c1c; color: #6e7681; }
+
+  /* ── CARD BODY ── */
+  .card-body { padding: 0 14px 14px; display: none; }
+  .card.expanded .card-body { display: block; }
+  .card-desc { background: var(--sb2); border: 1px solid var(--sb3); border-radius: 7px; padding: 10px 12px; font-size: 12.5px; color: var(--tx2); white-space: pre-wrap; line-height: 1.65; margin-bottom: 12px; max-height: 200px; overflow-y: auto; }
+  .card-desc::-webkit-scrollbar { width: 4px; }
+  .card-desc::-webkit-scrollbar-thumb { background: var(--sb3); border-radius: 2px; }
+
+  .field-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .field-group { flex: 1; min-width: 160px; }
+  .field-label { font-size: 11px; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+  .field-select { width: 100%; background: var(--sb2); border: 1px solid var(--sb3); border-radius: 7px; padding: 6px 10px; color: var(--tx); font-size: 12.5px; outline: none; cursor: pointer; }
+  .field-select:focus { border-color: var(--acc); }
+  .field-textarea { width: 100%; background: var(--sb2); border: 1px solid var(--sb3); border-radius: 7px; padding: 7px 10px; color: var(--tx); font-size: 12.5px; outline: none; resize: vertical; min-height: 60px; font-family: inherit; }
+  .field-textarea:focus { border-color: var(--acc); }
+  .field-textarea::placeholder { color: var(--tx3); }
+
+  .save-btn { background: var(--acc); color: #fff; border: none; border-radius: 7px; padding: 6px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .save-btn:hover { background: var(--acc2); }
+  .save-btn.saved { background: #16a34a; }
+
+  /* ── KANBAN (STATUS VIEW) ── */
+  .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+  .kb-col { min-width: 240px; width: 240px; background: var(--sb); border: 1px solid var(--sb3); border-radius: var(--radius); padding: 12px; }
+  .kb-col-head { font-size: 12px; font-weight: 700; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--sb3); display: flex; justify-content: space-between; align-items: center; }
+  .kb-card { background: var(--sb2); border: 1px solid var(--sb3); border-radius: 7px; padding: 9px 10px; margin-bottom: 6px; cursor: pointer; }
+  .kb-card:hover { border-color: var(--acc); }
+  .kb-card-title { font-size: 12px; font-weight: 600; color: var(--tx); line-height: 1.4; margin-bottom: 5px; }
+  .kb-card-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 20px; right: 20px; background: #1a2d1a; border: 1px solid #16a34a; color: #4ade80; padding: 10px 16px; border-radius: 8px; font-size: 12.5px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity .3s; }
+  .toast.show { opacity: 1; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap { background: var(--sb); border: 1px solid var(--sb3); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 20px; }
+  .progress-title { font-size: 12px; font-weight: 700; color: var(--tx2); margin-bottom: 10px; }
+  .progress-steps { display: flex; gap: 6px; }
+  .progress-step { flex: 1; }
+  .ps-label { font-size: 11px; color: var(--tx3); margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-bar { height: 6px; background: var(--sb3); border-radius: 3px; overflow: hidden; }
+  .ps-fill { height: 100%; border-radius: 3px; background: var(--acc); transition: width .4s; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--sb3); border-radius: 3px; }
+
+  .empty-state { padding: 40px; text-align: center; color: var(--tx3); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">PNE</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">Review Platform Tracker</div>
+  <div class="topbar-right" id="topStats"></div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-section">Xem theo</div>
+    <div class="nav-item active" onclick="setView('list')" id="nav-list">📋 Danh sách</div>
+    <div class="nav-item" onclick="setView('kanban')" id="nav-kanban">🗂 Kanban</div>
+
+    <div class="nav-section" style="margin-top:16px">Bước quy trình</div>
+    <div class="nav-item" onclick="filterStep(null)" id="step-all">Tất cả <span class="nav-count has" id="cnt-all"></span></div>
+    <div class="nav-item" onclick="filterStep(1)" id="step-1">Bước 1 — Tiếp nhận <span class="nav-count" id="cnt-1"></span></div>
+    <div class="nav-item" onclick="filterStep(2)" id="step-2">Bước 2 — Phân loại <span class="nav-count" id="cnt-2"></span></div>
+    <div class="nav-item" onclick="filterStep(3)" id="step-3">Bước 3 — Đàm phán <span class="nav-count" id="cnt-3"></span></div>
+    <div class="nav-item" onclick="filterStep(4)" id="step-4">Bước 4 — Recap <span class="nav-count" id="cnt-4"></span></div>
+    <div class="nav-item" onclick="filterStep(10)" id="step-10">Bước 10 — Thực thi <span class="nav-count" id="cnt-10"></span></div>
+
+    <div class="nav-section" style="margin-top:16px">Trạng thái</div>
+    <div class="nav-item" onclick="filterStatus('chua_xet')" id="fs-chua_xet">⬜ Chưa xét <span class="nav-count" id="sc-chua_xet"></span></div>
+    <div class="nav-item" onclick="filterStatus('dang_xet')" id="fs-dang_xet">🔵 Đang xét <span class="nav-count" id="sc-dang_xet"></span></div>
+    <div class="nav-item" onclick="filterStatus('ke_hoach')" id="fs-ke_hoach">🟣 Kế hoạch <span class="nav-count" id="sc-ke_hoach"></span></div>
+    <div class="nav-item" onclick="filterStatus('dang_lam')" id="fs-dang_lam">🟢 Đang làm <span class="nav-count" id="sc-dang_lam"></span></div>
+    <div class="nav-item" onclick="filterStatus('hoan_thanh')" id="fs-hoan_thanh">✅ Hoàn thành <span class="nav-count" id="sc-hoan_thanh"></span></div>
+    <div class="nav-item" onclick="filterStatus('bo_qua')" id="fs-bo_qua">⛔ Bỏ qua <span class="nav-count" id="sc-bo_qua"></span></div>
+  </div>
+
+  <div class="main" id="main"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'pne_fb_v1';
+const STEPS = {1:'Tiếp nhận & Phản hồi',2:'Phân loại & Ghi nhận',3:'Đàm phán & Chốt offer',4:'Báo cáo nội bộ (Recap)',10:'Nhận quyền lợi tài trợ'};
+const STATUS_LABEL = {chua_xet:'Chưa xét',dang_xet:'Đang xét',ke_hoach:'Kế hoạch',dang_lam:'Đang làm',hoan_thanh:'Hoàn thành',bo_qua:'Bỏ qua'};
+const LOAI_LABEL = {bug:'🐛 Bug',cai_tien:'⚡ Cải tiến',tinh_nang:'✨ Tính năng mới',ha_tang:'🏗 Hạ tầng'};
+const KT_LABEL = {de:'✅ Dễ',trung_binh:'🟡 Trung bình',kho:'🟠 Khó',khong_kha_thi:'❌ Không khả thi'};
+const UP_LABEL = {cao:'🔴 Cao',trung_binh:'🟡 Trung bình',thap:'⚪ Thấp'};
+
+const RAW_ITEMS = [
+  {id:'fb01', buoc:1, nhom:'Hạ tầng',
+   tieu_de:'Tên miền (Domain) định danh cho Platform',
+   mo_ta:`Hiện trạng: Tên miền đang hiển thị theo địa chỉ cá nhân Github Pages:\nhttps://hueptt-bit.github.io/pne-taitro/dashboard.html\n\n>> Đề xuất: Cấu hình tên miền tùy chỉnh chính thức của tổ chức/dự án cho Platform.`,
+   loai:'ha_tang'},
+  {id:'fb02', buoc:2, nhom:'Hồ sơ mới nhận',
+   tieu_de:'Thay đổi thứ tự hiển thị danh sách (mới lên đầu)',
+   mo_ta:`Hiện trạng: Danh sách đang sắp xếp từ cũ đến mới.\n\nVấn đề: Việc hiển thị tin cũ trước khiến nhân sự mất thời gian khi kiểm tra hồ sơ mới.\n\n>> Đề xuất: Sắp xếp theo thứ tự từ mới nhất đến cũ nhất (Mới lên đầu).`,
+   loai:'cai_tien'},
+  {id:'fb03', buoc:2, nhom:'Hồ sơ mới nhận',
+   tieu_de:'Bổ sung nhãn trạng thái "Đã phản hồi qua Email" và "Không phản hồi"',
+   mo_ta:`Hiện trạng: Hệ thống chưa hiển thị nhãn trực quan trên giao diện (giống nhãn "Chờ duyệt").\n\n>> Đề xuất: Bổ sung nhãn trạng thái "Đã phản hồi qua Email" và "Không phản hồi" để dễ theo dõi.`,
+   loai:'tinh_nang'},
+  {id:'fb04', buoc:2, nhom:'Trường bổ sung',
+   tieu_de:'Thêm trường "Tên Trường" để lọc',
+   mo_ta:`>> Đề xuất: Có thêm tên Trường để nếu cần có thể lọc hơn (kế bên trường tên CLB/Đơn vị).`,
+   loai:'tinh_nang'},
+  {id:'fb05', buoc:2, nhom:'Trạng thái liên hệ',
+   tieu_de:'Xem xét bỏ hoặc tự động hoá trạng thái "Mới nhận"',
+   mo_ta:`Hiện trạng: Khi mới nhận email từ đối tác, nhân sự không cần cập nhật ngay vào file tiến độ.\n\n>> Đề xuất: Nếu hệ thống không thể tự update, có thể bỏ luôn trạng thái "Mới nhận" vì nếu có thì sẽ tốn thêm thời gian để update thủ công.\n\nNote: Đã được giải quyết một phần bởi auto-sync email.`,
+   loai:'cai_tien'},
+  {id:'fb06', buoc:2, nhom:'Trạng thái liên hệ',
+   tieu_de:'Tự động điền CLB/Đơn vị và Tên CT khi trạng thái "Đã phản hồi qua mail"',
+   mo_ta:`>> Đề xuất: Khi hệ thống ghi nhận trạng thái "Đã phản hồi qua mail", hệ thống cần chiết xuất dữ liệu tự động từ nội dung email để tự động điền trường thông tin "Tên CLB/Đơn vị" và "Tên chương trình / Sự kiện".`,
+   loai:'tinh_nang'},
+  {id:'fb07', buoc:2, nhom:'Trạng thái liên hệ',
+   tieu_de:'Tự động chuyển sang "Đang xét" khi cập nhật trạng thái "Đã tạo Zalo"',
+   mo_ta:`Hiện trạng: Khi nhân sự cập nhật trạng thái liên hệ, thông tin chương trình vẫn nằm nguyên tại vị trí cũ.\n\n>> Đề xuất: Khi chuyển trạng thái liên hệ sang "Đã tạo Zalo", hệ thống tự động chuyển toàn bộ thông tin chương trình đó từ "Mới nhận" sang "Đang xét".`,
+   loai:'tinh_nang'},
+  {id:'fb08', buoc:3, nhom:'Hồ sơ',
+   tieu_de:'Cải tiến Recap: Prompt AI trích xuất chi tiết hoạt động sự kiện',
+   mo_ta:`Hiện trạng: Phần Bản tóm tắt (Recap) chưa hiển thị được nội dung chi tiết và các hoạt động cụ thể.\n\n>> Đề xuất: Bổ sung/tối ưu Prompt AI để tự động quét và trích xuất:\n- Chi tiết các hoạt động, các chặng của sự kiện\n- Đối với Cuộc thi: Cơ cấu giải thưởng, Số lượng người tham dự đêm Chung kết\n- Đối với Chuỗi chương trình: Số lượng người tham gia từng hoạt động\n- Quy mô, tổng chi phí (tự fill nếu không có trong proposal)\n\nNote thêm: Nếu hồ sơ quá nặng (>200MB/500MB), nhân sự phải nén thủ công.`,
+   loai:'cai_tien'},
+  {id:'fb09', buoc:3, nhom:'Hồ sơ',
+   tieu_de:'Sửa lỗi phân tích khi Proposal không ghi rõ giá trị gói tài trợ',
+   mo_ta:`Hiện trạng: Khi file Proposal không phân chia cụ thể giá trị từng gói, AI bị kẹt logic và không trích xuất được thông tin "Quyền lợi".\n\n>> Đề xuất (Cơ chế dự phòng - Fallback): Hệ thống không nên phụ thuộc hoàn toàn vào dữ liệu có sẵn. Khi AI không tìm được giá trị gói, nên hiển thị form nhập tay thay vì bỏ trống/lỗi.`,
+   loai:'bug'},
+  {id:'fb10', buoc:3, nhom:'Hồ sơ',
+   tieu_de:'Sửa lỗi ghi đè Recap — không lưu riêng biệt cho từng chương trình',
+   mo_ta:`Hiện trạng: Khi chạy tóm tắt cho Chương trình B, nội dung Recap của B ghi đè lên Chương trình A. Kết quả: quay lại CT A thấy nội dung của CT B.\n\n>> Đề xuất: Mỗi chương trình phải có ô lưu Recap riêng biệt, không bị ghi đè khi xử lý chương trình khác.`,
+   loai:'bug'},
+  {id:'fb11', buoc:3, nhom:'Offer',
+   tieu_de:'Sửa lỗi không hiển thị đầy đủ Quyền lợi + lỗi nút "+xx quyền lợi khác"',
+   mo_ta:`Hiện trạng:\n- Giao diện không hiển thị hết toàn bộ danh sách quyền lợi\n- Nút "+xx quyền lợi khác" không click được / click không hiển thị\n\n>> Đề xuất:\n- Sửa lỗi nút mở rộng danh sách\n- Nếu danh sách quá dài nên có thêm tính năng scroll`,
+   loai:'bug'},
+  {id:'fb12', buoc:3, nhom:'Offer',
+   tieu_de:'Đổi tên "Mệnh giá" → "Giá trị tối đa"',
+   mo_ta:`>> Đề xuất: Trong phần Offer, đổi label "MỆNH GIÁ" thành "GIÁ TRỊ TỐI ĐA" cho đúng ngữ nghĩa.`,
+   loai:'cai_tien'},
+  {id:'fb13', buoc:3, nhom:'Thương lượng',
+   tieu_de:'Sắp xếp danh sách Voucher từ giá trị lớn → nhỏ',
+   mo_ta:`Hiện trạng: Voucher đang hiển thị theo thứ tự nhập (FIFS), dẫn đến lộn xộn.\n\n>> Đề xuất: Tự động sắp xếp và hiển thị theo thứ tự giá trị voucher từ lớn đến nhỏ (giảm dần).`,
+   loai:'cai_tien'},
+  {id:'fb14', buoc:3, nhom:'Thương lượng',
+   tieu_de:'Format lại hiển thị Tóm tắt sau đàm phán giống Tổng offer',
+   mo_ta:`>> Đề xuất: Format lại hiển thị Tóm tắt sau đàm phán giống như hiển thị của Tổng offer PNE, gồm các cột:\nVoucher — SL — GIÁ TRỊ TỐI ĐA — THÀNH TIỀN`,
+   loai:'cai_tien'},
+  {id:'fb15', buoc:4, nhom:'Recap',
+   tieu_de:'Tự động trích xuất và đính kèm link Fanpage BTC trong Recap',
+   mo_ta:`>> Đề xuất: Hệ thống tự động nhận diện, trích xuất và đính kèm đường link Fanpage của Ban tổ chức (BTC) hoặc của Chương trình/Sự kiện vào trong nội dung bản Recap.`,
+   loai:'tinh_nang'},
+  {id:'fb16', buoc:10, nhom:'Thực thi',
+   tieu_de:'Đồng bộ tự động trường "Hợp đồng" từ tab Hợp đồng sang tab Thực thi',
+   mo_ta:`Hiện trạng: Nhân sự phải cập nhật thông tin hợp đồng thủ công ở nhiều tab, dễ sai lệch và tốn thời gian.\n\n>> Đề xuất: Trường "Hợp đồng" ở tab Thực thi phải được hệ thống tự động lấy dữ liệu từ trường "Hợp đồng" đã có ở tab Hợp đồng.`,
+   loai:'cai_tien'},
+  {id:'fb17', buoc:2, nhom:'Hồ sơ mới nhận',
+   tieu_de:'Bổ sung trường thông tin chuyên sâu cho Cuộc thi và Chuỗi chương trình',
+   mo_ta:`Hiện trạng: Giao diện chưa hiển thị các thông tin sâu về quy mô và cơ cấu để hỗ trợ nhân sự đưa ra đề xuất offer phù hợp.\n\n>> Đề xuất: Bổ sung các trường thông tin (hoặc cấu trúc lại Prompt để AI trích xuất):\n- Cuộc thi: Cơ cấu giải thưởng + Số lượng người tham dự đêm Chung kết\n- Chuỗi chương trình: Số lượng người tham gia từng hoạt động riêng lẻ`,
+   loai:'tinh_nang'},
+];
+
+// ── STATE ──
+let ST = { view: 'list', stepFilter: null, statusFilter: null, search: '' };
+let expandedId = null;
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveState(state) {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+}
+// Trạng thái mặc định cho các mục đã xử lý (override nếu user chưa có state riêng)
+const DONE_DEFAULTS = {
+  fb12: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Đã đổi label "Mệnh giá" → "Giá trị tối đa" trong bảng Offer recap.\nCommit: fix: quick wins'},
+  fb02: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Thêm default sort theo receivedDate desc vào hàm filtered(). Hồ sơ mới nhất luôn lên đầu, trừ khi user bấm sort cột.\nCommit: fix: quick wins'},
+  fb13: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'trung_binh',
+         ghi_chu:'✅ Recap thương lượng sort voucher lớn → nhỏ (hiện kim xuống cuối). Dùng sorted copy, không mutate _negDraft.\nCommit: fix: quick wins'},
+  fb11: {status:'hoan_thanh', loai:'bug', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Nút "+N quyền lợi khác" click được, toggle mở rộng / thu gọn. Thêm togglePkgBenefits() + _expandedPkgBenefits.\nCommit: fix: quick wins'},
+  fb10: {status:'hoan_thanh', loai:'bug', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Root cause: _extracted (global) không reset khi mở record B sau record A → B bị ghi đè data của A.\nFix: đổi if(!id)_extracted={} → _extracted={} trong openAddModal() — reset mọi lần mở modal.\nCommit: fix: fb10 reset _extracted khi mở record'},
+  fb09: {status:'hoan_thanh', loai:'bug', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Hai case được xử lý:\n1. Packages rỗng (AI không parse được): hiện message "Chưa có dữ liệu gói CLB" thay vì bỏ trống.\n2. Package có value=0 (proposal không ghi giá trị): hiện cảnh báo vàng "Proposal không ghi giá trị gói" thay vì hiện sai "Đủ điều kiện 0đ".\nCommit: fix: fb09 fallback khi proposal thiếu giá trị gói'},
+  fb03: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Thêm color badge lienhe_status vào ô Tên CLB trong renderList().\nMàu: Mới nhận=xanh dương, Đã phản hồi=xanh lá, Đã Zalo=tím, Không phản hồi=đỏ.\nCommit: feat: fb03 lienhe_status badges in list'},
+  fb04: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'trung_binh',
+         ghi_chu:'✅ Thêm trường "Tên Trường / Đại học" (f_school).\nForm: row mới sau org/event. Load/Save/Reset đầy đủ. Hiển thị dưới tên CLB (🏫). Tìm kiếm được trong search.\nCommit: feat: fb04 add school field'},
+  fb14: {status:'hoan_thanh', loai:'cai_tien', kha_thi:'de', uu_tien:'cao',
+         ghi_chu:'✅ Recap đàm phán đổi từ div rows sang <table> 4 cột: Loại voucher | SL | Giá trị tối đa | Thành tiền.\nCash rows hiện "Hiện kim" với dấu — ở cột SL và Giá trị tối đa.\nCommit: feat: fb14 negotiation recap as table'},
+};
+
+let STATE = loadState(); // {fb01: {status, loai, kha_thi, uu_tien, ghi_chu}, ...}
+
+function getItem(id) {
+  // Merge: raw defaults < DONE_DEFAULTS < user state (localStorage)
+  const base = {status:'chua_xet', kha_thi:'', uu_tien:'', ghi_chu:''};
+  const preset = DONE_DEFAULTS[id] || {};
+  const userState = STATE[id] || {};
+  // User state takes full priority if they've interacted; otherwise use preset
+  const merged = Object.assign({}, RAW_ITEMS.find(r=>r.id===id), base, preset, userState);
+  return merged;
+}
+function saveItem(id, fields) {
+  STATE[id] = Object.assign(STATE[id]||{}, fields);
+  saveState(STATE);
+}
+
+// ── COMPUTED ──
+function filteredItems() {
+  return RAW_ITEMS.filter(r => {
+    const s = getItem(r.id);
+    if(ST.stepFilter !== null && r.buoc !== ST.stepFilter) return false;
+    if(ST.statusFilter && s.status !== ST.statusFilter) return false;
+    if(ST.search) {
+      const q = ST.search.toLowerCase();
+      if(!(r.tieu_de.toLowerCase().includes(q) || r.nhom.toLowerCase().includes(q) || r.mo_ta.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+}
+
+function countByStep(buoc) {
+  return RAW_ITEMS.filter(r=>r.buoc===buoc).length;
+}
+function countByStatus(status) {
+  return RAW_ITEMS.filter(r=>getItem(r.id).status===status).length;
+}
+function doneCount() { return RAW_ITEMS.filter(r=>getItem(r.id).status==='hoan_thanh').length; }
+function progressPct() { return Math.round(doneCount()/RAW_ITEMS.length*100); }
+
+// ── NAV ──
+function setView(v) {
+  ST.view = v;
+  document.querySelectorAll('[id^=nav-]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('nav-'+v).classList.add('active');
+  render();
+}
+function filterStep(b) {
+  ST.stepFilter = b; ST.statusFilter = null; ST.search = '';
+  document.querySelectorAll('[id^=step-],[id^=fs-]').forEach(el=>el.classList.remove('active'));
+  document.getElementById(b===null?'step-all':'step-'+b).classList.add('active');
+  render();
+}
+function filterStatus(s) {
+  ST.statusFilter = s; ST.stepFilter = null; ST.search = '';
+  document.querySelectorAll('[id^=step-],[id^=fs-]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('fs-'+s).classList.add('active');
+  render();
+}
+
+// ── RENDER ──
+function render() {
+  updateSidebarCounts();
+  updateTopStats();
+  if(ST.view==='kanban') renderKanban();
+  else renderList();
+}
+
+function updateTopStats() {
+  const done = doneCount(), pct = progressPct();
+  const inprog = countByStatus('dang_lam');
+  document.getElementById('topStats').innerHTML = `
+    <div class="badge-stat"><strong>${done}</strong>/${RAW_ITEMS.length} hoàn thành</div>
+    <div class="badge-stat">${inprog > 0 ? `<strong style="color:#34d399">${inprog}</strong>` : '0'} đang làm</div>
+    <div class="badge-stat"><strong>${pct}%</strong> tiến độ</div>
+  `;
+}
+
+function updateSidebarCounts() {
+  document.getElementById('cnt-all').textContent = RAW_ITEMS.length;
+  [1,2,3,4,10].forEach(b => {
+    const el = document.getElementById('cnt-'+b);
+    if(el) el.textContent = countByStep(b);
+  });
+  ['chua_xet','dang_xet','ke_hoach','dang_lam','hoan_thanh','bo_qua'].forEach(s => {
+    const el = document.getElementById('sc-'+s);
+    const cnt = countByStatus(s);
+    if(el) {
+      el.textContent = cnt;
+      el.className = 'nav-count' + (cnt > 0 && s !== 'chua_xet' ? ' has' : '');
+    }
+  });
+}
+
+function tagHTML(cls, text) {
+  return `<span class="tag tag-${cls}">${text}</span>`;
+}
+
+function statusTag(status) {
+  const labels = {chua_xet:'Chưa xét',dang_xet:'Đang xét',ke_hoach:'Kế hoạch',dang_lam:'Đang làm',hoan_thanh:'Hoàn thành',bo_qua:'Bỏ qua'};
+  return tagHTML(status, labels[status]||status);
+}
+function loaiTag(loai) {
+  if(!loai) return '';
+  return tagHTML(loai, LOAI_LABEL[loai]||loai);
+}
+function ktTag(kt) {
+  if(!kt) return '';
+  return tagHTML(kt, KT_LABEL[kt]||kt);
+}
+function upTag(up) {
+  if(!up) return '';
+  return tagHTML(up, UP_LABEL[up]||up);
+}
+
+function buocColor(buoc) {
+  const colors = {1:'#60a5fa',2:'#34d399',3:'#fbbf24',4:'#a78bfa',10:'#fb923c'};
+  return colors[buoc]||'#8b949e';
+}
+
+function renderList() {
+  const items = filteredItems();
+  const main = document.getElementById('main');
+
+  // Progress overview
+  let h = `<div class="progress-wrap">
+    <div class="progress-title">Tiến độ tổng thể — ${progressPct()}% (${doneCount()}/${RAW_ITEMS.length} mục)</div>
+    <div class="progress-steps">`;
+  [1,2,3,4,10].forEach(buoc => {
+    const stepItems = RAW_ITEMS.filter(r=>r.buoc===buoc);
+    const doneStep = stepItems.filter(r=>getItem(r.id).status==='hoan_thanh').length;
+    const pct = stepItems.length ? Math.round(doneStep/stepItems.length*100) : 0;
+    h += `<div class="progress-step">
+      <div class="ps-label" style="color:${buocColor(buoc)}">B${buoc} ${STEPS[buoc]}</div>
+      <div class="ps-bar"><div class="ps-fill" style="width:${pct}%;background:${buocColor(buoc)}"></div></div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${doneStep}/${stepItems.length}</div>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  // Filter bar
+  h += `<div class="filter-bar">
+    <input class="search-box" placeholder="🔍 Tìm kiếm..." value="${ST.search}" oninput="ST.search=this.value;render()" />
+    <div class="filter-sep"></div>
+    <span style="font-size:11px;color:var(--tx3)">Loại:</span>
+    ${['','bug','cai_tien','tinh_nang','ha_tang'].map(v=>`<div class="filter-pill ${ST._loaiF===v?'active':''}" onclick="ST._loaiF='${v}';render()">${v?LOAI_LABEL[v]:'Tất cả'}</div>`).join('')}
+  </div>`;
+
+  if(!items.length) {
+    h += `<div class="empty-state">Không có mục nào phù hợp</div>`;
+    main.innerHTML = h; return;
+  }
+
+  // Group by step
+  const grouped = {};
+  items.forEach(r => {
+    if(!grouped[r.buoc]) grouped[r.buoc] = [];
+    if(!ST._loaiF || getItem(r.id).loai === ST._loaiF || r.loai === ST._loaiF) grouped[r.buoc].push(r);
+  });
+
+  Object.keys(grouped).sort((a,b)=>Number(a)-Number(b)).forEach(buoc => {
+    const stepItems = grouped[buoc];
+    if(!stepItems || !stepItems.length) return;
+    const color = buocColor(Number(buoc));
+    h += `<div class="section-title" style="color:${color}">Bước ${buoc} — ${STEPS[buoc]} <span style="color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0">(${stepItems.length} mục)</span></div>`;
+    stepItems.forEach(r => {
+      const item = getItem(r.id);
+      const exp = expandedId === r.id;
+      h += `<div class="card ${exp?'expanded':''}" id="card-${r.id}">
+        <div class="card-head" onclick="toggleCard('${r.id}')">
+          <div class="card-num" style="background:${color}22;color:${color}">${RAW_ITEMS.indexOf(r)+1}</div>
+          <div class="card-info">
+            <div class="card-title">${r.tieu_de}</div>
+            <div class="card-meta">
+              <span class="tag tag-nhom">${r.nhom}</span>
+              ${statusTag(item.status||'chua_xet')}
+              ${loaiTag(item.loai||r.loai)}
+              ${ktTag(item.kha_thi)}
+              ${upTag(item.uu_tien)}
+            </div>
+          </div>
+          <div class="card-actions">
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-desc">${r.mo_ta}</div>
+          <div class="field-row">
+            <div class="field-group">
+              <div class="field-label">Trạng thái</div>
+              <select class="field-select" onchange="updateField('${r.id}','status',this.value)">
+                ${Object.entries(STATUS_LABEL).map(([v,l])=>`<option value="${v}" ${(item.status||'chua_xet')===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Loại</div>
+              <select class="field-select" onchange="updateField('${r.id}','loai',this.value)">
+                <option value="">-- Chọn --</option>
+                ${Object.entries(LOAI_LABEL).map(([v,l])=>`<option value="${v}" ${(item.loai||r.loai)===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Khả thi</div>
+              <select class="field-select" onchange="updateField('${r.id}','kha_thi',this.value)">
+                <option value="">-- Chưa đánh giá --</option>
+                ${Object.entries(KT_LABEL).map(([v,l])=>`<option value="${v}" ${item.kha_thi===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Ưu tiên</div>
+              <select class="field-select" onchange="updateField('${r.id}','uu_tien',this.value)">
+                <option value="">-- Chưa xác định --</option>
+                ${Object.entries(UP_LABEL).map(([v,l])=>`<option value="${v}" ${item.uu_tien===v?'selected':''}>${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="field-group" style="margin-bottom:10px">
+            <div class="field-label">Ghi chú nội bộ</div>
+            <textarea class="field-textarea" placeholder="Ghi chú, quyết định, link liên quan..." id="note-${r.id}" onblur="saveNote('${r.id}')">${item.ghi_chu||''}</textarea>
+          </div>
+          <button class="save-btn" id="btn-${r.id}" onclick="saveNote('${r.id}')">Lưu ghi chú</button>
+        </div>
+      </div>`;
+    });
+  });
+
+  main.innerHTML = h;
+}
+
+function renderKanban() {
+  const statuses = ['chua_xet','dang_xet','ke_hoach','dang_lam','hoan_thanh','bo_qua'];
+  const statusLabels = {chua_xet:'⬜ Chưa xét',dang_xet:'🔵 Đang xét',ke_hoach:'🟣 Kế hoạch',dang_lam:'🟢 Đang làm',hoan_thanh:'✅ Hoàn thành',bo_qua:'⛔ Bỏ qua'};
+  const main = document.getElementById('main');
+
+  let h = `<div class="kanban">`;
+  statuses.forEach(s => {
+    const items = RAW_ITEMS.filter(r => (getItem(r.id).status||'chua_xet') === s);
+    h += `<div class="kb-col">
+      <div class="kb-col-head">
+        <span>${statusLabels[s]}</span>
+        <span class="nav-count ${items.length&&s!=='chua_xet'?'has':''}">${items.length}</span>
+      </div>`;
+    if(!items.length) h += `<div style="color:var(--tx3);font-size:12px;text-align:center;padding:12px">Trống</div>`;
+    items.forEach(r => {
+      const item = getItem(r.id);
+      const color = buocColor(r.buoc);
+      h += `<div class="kb-card" onclick="goToCard('${r.id}')">
+        <div class="kb-card-title">${r.tieu_de}</div>
+        <div class="kb-card-meta">
+          <span class="tag tag-buoc" style="background:${color}22;color:${color};font-size:10px">B${r.buoc}</span>
+          <span class="tag tag-nhom" style="font-size:10px">${r.nhom}</span>
+          ${ktTag(item.kha_thi)}
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  });
+  h += `</div>`;
+  main.innerHTML = h;
+}
+
+function toggleCard(id) {
+  expandedId = expandedId === id ? null : id;
+  render();
+  if(expandedId) {
+    setTimeout(() => {
+      const el = document.getElementById('card-'+id);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }, 50);
+  }
+}
+
+function goToCard(id) {
+  ST.view = 'list'; ST.stepFilter = null; ST.statusFilter = null;
+  document.querySelectorAll('[id^=nav-]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('nav-list').classList.add('active');
+  expandedId = id;
+  render();
+  setTimeout(() => {
+    const el = document.getElementById('card-'+id);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+}
+
+function updateField(id, field, value) {
+  saveItem(id, {[field]: value});
+  render();
+  showToast('✓ Đã lưu');
+}
+
+function saveNote(id) {
+  const ta = document.getElementById('note-'+id);
+  if(!ta) return;
+  saveItem(id, {ghi_chu: ta.value});
+  const btn = document.getElementById('btn-'+id);
+  if(btn) { btn.textContent = '✓ Đã lưu'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='Lưu ghi chú';btn.classList.remove('saved');},2000); }
+  showToast('✓ Ghi chú đã lưu');
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// Init
+document.getElementById('step-all').classList.add('active');
+render();
+</script>
+</body>
+</html>

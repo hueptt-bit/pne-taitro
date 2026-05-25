@@ -363,6 +363,37 @@ function doGet(e) {
   if (action === 'ping') {
     return jsonResponse({ ok: true, time: new Date().toISOString() });
   }
+  if (action === 'login') {
+    const username = String((e.parameter && e.parameter.username) || '').trim().toLowerCase();
+    const password = String((e.parameter && e.parameter.password) || '').trim();
+    if (!username || !password) return jsonResponse({ ok: false, error: 'Vui lòng nhập đầy đủ thông tin' });
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Users');
+
+    if (!sheet) {
+      sheet = ss.insertSheet('Users');
+      sheet.getRange(1, 1, 1, 5).setValues([['username', 'password', 'name', 'role', 'active']]);
+      sheet.getRange(2, 1, 3, 5).setValues([
+        ['hueptt',   'Pne@2026',   'Hue PTT',    'admin', true],
+        ['duonght',  'Pne@2026',   'Thuy Duong', 'admin', true],
+        ['pneadmin', 'Admin@2026', 'Admin PNE',  'admin', true]
+      ]);
+    }
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const [uname, pass, name, role, active] = data[i];
+      if (
+        String(uname).trim().toLowerCase() === username &&
+        String(pass).trim() === password &&
+        active !== false && String(active).toUpperCase() !== 'FALSE'
+      ) {
+        return jsonResponse({ ok: true, user: { username: String(uname).trim(), name: String(name) || String(uname), role: String(role) || 'admin' } });
+      }
+    }
+    return jsonResponse({ ok: false, error: 'Sai tên đăng nhập hoặc mật khẩu' });
+  }
   return jsonResponse({ ok: false, error: 'Unknown GET action: ' + action });
 }
 
@@ -404,6 +435,40 @@ function doPost(e) {
   if (action === 'createTracking') {
     try { return jsonResponse(createTrackingForRecord(body.id)); }
     catch(e) { return jsonResponse({ ok: false, error: 'createTracking: ' + e.message }); }
+  }
+
+  if (action === 'login') {
+    const username = String(body.username || '').trim().toLowerCase();
+    const password = String(body.password || '').trim();
+    if (!username || !password) return jsonResponse({ ok: false, error: 'Vui lòng nhập đầy đủ thông tin' });
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Users');
+
+    // Tu dong tao sheet Users voi 3 tai khoan mac dinh neu chua co
+    if (!sheet) {
+      sheet = ss.insertSheet('Users');
+      sheet.getRange(1, 1, 1, 5).setValues([['username', 'password', 'name', 'role', 'active']]);
+      sheet.getRange(2, 1, 3, 5).setValues([
+        ['hueptt',   'Pne@2026',   'Hue PTT',     'admin', true],
+        ['duonght',  'Pne@2026',   'Thuy Duong',  'admin', true],
+        ['pneadmin', 'Admin@2026', 'Admin PNE',   'admin', true]
+      ]);
+      Logger.log('Created Users sheet with default accounts');
+    }
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const [uname, pass, name, role, active] = data[i];
+      if (
+        String(uname).trim().toLowerCase() === username &&
+        String(pass).trim() === password &&
+        active !== false && String(active).toUpperCase() !== 'FALSE'
+      ) {
+        return jsonResponse({ ok: true, user: { username: String(uname).trim(), name: String(name) || String(uname), role: String(role) || 'admin' } });
+      }
+    }
+    return jsonResponse({ ok: false, error: 'Sai tên đăng nhập hoặc mật khẩu' });
   }
 
   return jsonResponse({ ok: false, error: 'Unknown POST action: ' + action });
