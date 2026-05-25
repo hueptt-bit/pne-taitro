@@ -397,6 +397,15 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           <div class="form-row"><label>Tên CLB / Đơn vị *</label><input id="f_org" placeholder="VD: CLB Âm nhạc UTE"></div>
           <div class="form-row"><label>Tên chương trình / Sự kiện *</label><input id="f_event" placeholder="VD: Đêm nhạc acoustic 2026"></div>
         </div>
+        <!-- fb06: gợi ý trích xuất từ email body -->
+        <div id="email_extract_hint" style="display:none;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:8px;padding:10px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">📧 Gợi ý từ email</div>
+          <div id="email_extract_body" style="font-size:12.5px;color:#1e3a8a;line-height:1.6"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-sm" onclick="applyEmailExtract()" style="background:#2563eb;color:#fff;font-size:12px">✓ Áp dụng</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('email_extract_hint').style.display='none'" style="font-size:12px">Bỏ qua</button>
+          </div>
+        </div>
         <div class="form-row"><label>Tên Trường / Đại học</label><input id="f_school" placeholder="VD: Đại học Sư phạm Kỹ thuật TP.HCM"></div>
         <div class="form-2col">
           <div class="form-row"><label>Mảng tài trợ</label>
@@ -1787,6 +1796,46 @@ function rpToggleZalo(val){
   const row=document.getElementById('rp_zalo_row');
   if(row)row.style.display=(val==='zalo'?'':'none');
 }
+// fb06: Trích xuất Tên CLB và Tên CT từ nội dung email body
+let _emailExtracted = {};
+function extractFromEmailBody(text){
+  if(!text||text.length<20)return null;
+  let org=null,event=null;
+  // Tìm tên CLB / tổ chức
+  const orgPatterns=[
+    /(?:chúng\s+tôi\s+là|đại\s+diện\s+(?:cho|của)|thuộc|bên\s+phía)\s+((?:CLB|Ban|Câu\s+lạc\s+bộ|Đội|Hội|Nhóm)[^\n,;\.]{2,50})/i,
+    /(CLB|Câu\s+lạc\s+bộ)\s+([^\n,;\.]{3,45})/i,
+    /(Ban\s+(?:Tổ\s+chức|Học\s+thuật|Văn\s+hoá|Kỹ\s+thuật|Truyền\s+thông)[^\n,;\.]{0,30})/i,
+  ];
+  for(const p of orgPatterns){const m=text.match(p);if(m){org=(m[2]?m[1]+' '+m[2]:m[1]).trim().replace(/[,;\.]+$/,'').substring(0,60);break;}}
+  // Tìm tên chương trình / sự kiện
+  const evtPatterns=[
+    /(?:chương\s+trình|sự\s+kiện|cuộc\s+thi|đêm\s+nhạc|hội\s+thảo|gala|concert|lễ\s+hội|workshop)\s+["""']?([^\n"']{5,70})["""']?/i,
+    /tên\s+(?:chương\s+trình|sự\s+kiện|cuộc\s+thi)\s*[:\-–]\s*["""']?([^\n"']{5,70})["""']?/i,
+  ];
+  for(const p of evtPatterns){const m=text.match(p);if(m){event=m[1].trim().replace(/^["""']|["""']$/g,'').replace(/[,;\.]+$/,'').substring(0,80);break;}}
+  return(org||event)?{org,event}:null;
+}
+function showEmailExtractHint(extracted){
+  const hint=document.getElementById('email_extract_hint');
+  const body=document.getElementById('email_extract_body');
+  if(!hint||!body)return;
+  _emailExtracted=extracted;
+  let html='';
+  if(extracted.org)html+=`<div>🏢 <b>Tên CLB:</b> ${extracted.org}</div>`;
+  if(extracted.event)html+=`<div>🎯 <b>Tên CT:</b> ${extracted.event}</div>`;
+  body.innerHTML=html;
+  hint.style.display='';
+}
+function applyEmailExtract(){
+  const orgEl=document.getElementById('f_org');
+  const evtEl=document.getElementById('f_event');
+  if(_emailExtracted.org&&orgEl&&!orgEl.value.trim())orgEl.value=_emailExtracted.org;
+  else if(_emailExtracted.org&&orgEl)orgEl.value=_emailExtracted.org;
+  if(_emailExtracted.event&&evtEl&&!evtEl.value.trim())evtEl.value=_emailExtracted.event;
+  document.getElementById('email_extract_hint').style.display='none';
+  _emailExtracted={};
+}
 function updateEventTypeFields(){
   const val=document.getElementById('f_event_type').value;
   document.getElementById('event_cuocthi_fields').style.display=(val==='cuoc_thi')?'':'none';
@@ -1799,6 +1848,15 @@ function modalToggleZalo(val){
   if(val==='zalo'){
     const stageSel=document.getElementById('f_stage');
     if(stageSel&&stageSel.value==='received')stageSel.value='reviewing';
+  }
+  // fb06: Chọn "Đã phản hồi qua mail" → gợi ý trích xuất CLB/CT từ email body
+  const hint=document.getElementById('email_extract_hint');
+  if(val==='lien_he'){
+    const notes=document.getElementById('f_notes')?.value||'';
+    const extracted=extractFromEmailBody(notes);
+    if(extracted)showEmailExtractHint(extracted);
+  }else{
+    if(hint)hint.style.display='none';
   }
 }
 
