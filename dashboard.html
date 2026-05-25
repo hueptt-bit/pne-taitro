@@ -932,6 +932,16 @@ function showToast(msg, type='success', dur=3000){
   clearTimeout(t._to); t._to=setTimeout(()=>t.style.opacity='0', dur);
 }
 
+// Force sync: xoá cache local, lấy toàn bộ từ GAS làm chuẩn
+async function forceSyncFromGAS(){
+  if(!GAS_URL){ promptGasUrl(); return; }
+  if(!confirm('Reset & Sync sẽ xoá toàn bộ dữ liệu local và tải lại từ GAS. Tiếp tục?')) return;
+  localStorage.removeItem(KEY_S);
+  localStorage.removeItem('pne_deleted');
+  showToast('🔄 Đang tải lại từ GAS…','info',3000);
+  await syncFromGAS(false);
+}
+
 // Đọc tất cả records từ GAS về, merge theo updatedAt (mới hơn thắng)
 async function syncFromGAS(silent=false){
   if(!GAS_URL){ promptGasUrl(); return; }
@@ -951,10 +961,10 @@ async function syncFromGAS(silent=false){
         const localRec=localMap.get(gasRec.id);
         if(!localRec){ localMap.set(gasRec.id,gasRec); newCount++; }
         else{
-          // So sánh updatedAt — GAS thắng nếu mới hơn (tức account khác vừa lưu)
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
-          if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
+          // GAS thắng nếu: mới hơn, HOẶC cả 2 thiếu updatedAt (record cũ → lấy GAS làm chuẩn)
+          if(tGas>tLocal||(tGas===0&&tLocal===0)){ localMap.set(gasRec.id,gasRec); updatedCount++; }
         }
       });
       if(newCount>0||updatedCount>0){
@@ -1124,7 +1134,7 @@ function renderSidebar(){
       <div class="sb-yr-row">${YEARS.map(y=>`<div class="sb-yr-btn${ST.year===y?` active-${tm.cls}`:''}" onclick="setYear('${y}')">${y}</div>`).join('')}</div>
       <div style="margin-top:8px">
         ${GAS_URL
-          ? `<button onclick="syncFromGAS()" style="width:100%;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#c9d1d9'" onmouseout="this.style.color='#6e7f8d'" title="Đồng bộ dữ liệu từ GAS"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Sync GAS</button>`
+          ? `<button onclick="syncFromGAS()" style="width:100%;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#c9d1d9'" onmouseout="this.style.color='#6e7f8d'" title="Đồng bộ dữ liệu từ GAS"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Sync GAS</button><button onclick="forceSyncFromGAS()" style="width:100%;margin-top:5px;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#6e7f8d'" title="Xoá cache local và tải lại toàn bộ từ GAS (dùng khi data bị lệch)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Reset & Sync</button>`
           : `<button onclick="promptGasUrl()" style="width:100%;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit" title="Cài đặt GAS URL"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Cài GAS URL</button>`
         }
       </div>
@@ -4022,7 +4032,7 @@ function _autoSyncPull(){
         else{
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
-          if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
+          if(tGas>tLocal||(tGas===0&&tLocal===0)){ localMap.set(gasRec.id,gasRec); updatedCount++; }
         }
       });
       if(newCount>0||updatedCount>0){
