@@ -964,7 +964,7 @@ async function syncFromGAS(silent=false){
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
           // GAS thắng nếu: mới hơn, HOẶC cả 2 thiếu updatedAt (record cũ → lấy GAS làm chuẩn)
-          if(tGas>tLocal||(tGas===0&&tLocal===0)){ localMap.set(gasRec.id,gasRec); updatedCount++; }
+          if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
         }
       });
       if(newCount>0||updatedCount>0){
@@ -4037,7 +4037,7 @@ function _autoSyncPull(){
         else{
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
-          if(tGas>tLocal||(tGas===0&&tLocal===0)){ localMap.set(gasRec.id,gasRec); updatedCount++; }
+          if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
         }
       });
       if(newCount>0||updatedCount>0){
