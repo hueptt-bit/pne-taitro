@@ -4001,42 +4001,47 @@ if(getAuthUser()){
   showLoginOverlay();
 }
 
-// ══ AUTO-SYNC — mỗi 60 giây, merge theo updatedAt để đồng bộ nhiều tài khoản ══
-if(GAS_URL){
-  setInterval(function(){
-    if(!getAuthUser()) return;
-    fetch(GAS_URL + '?action=getAll')
-      .then(r => r.json())
-      .then(data => {
-        if(!data.ok || !Array.isArray(data.records)) return;
-        const local    = loadAll();
-        const localMap = new Map(local.map(r=>[r.id,r]));
-        const localDel = JSON.parse(localStorage.getItem('pne_deleted')||'[]');
-        const gasDel   = Array.isArray(data.deletedIds) ? data.deletedIds : [];
-        const allDel   = new Set([...localDel,...gasDel]);
-        if(gasDel.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDel]));
-        let newCount=0, updatedCount=0;
-        data.records.forEach(gasRec=>{
-          if(allDel.has(gasRec.id)) return;
-          const localRec=localMap.get(gasRec.id);
-          if(!localRec){ localMap.set(gasRec.id,gasRec); newCount++; }
-          else{
-            const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
-            const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
-            if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
-          }
-        });
-        if(newCount>0||updatedCount>0){
-          saveAll([...localMap.values()],{noPush:true});
-          render();
-          const parts=[];
-          if(newCount>0) parts.push('🔔 '+newCount+' hồ sơ mới');
-          if(updatedCount>0) parts.push('🔄 '+updatedCount+' hồ sơ cập nhật');
-          showToast(parts.join(' · '),'success',5000);
+// ══ AUTO-SYNC — merge theo updatedAt, chạy khi: focus tab + mỗi 15 giây ══
+function _autoSyncPull(){
+  if(!GAS_URL||!getAuthUser()) return;
+  fetch(GAS_URL + '?action=getAll')
+    .then(r => r.json())
+    .then(data => {
+      if(!data.ok || !Array.isArray(data.records)) return;
+      const local    = loadAll();
+      const localMap = new Map(local.map(r=>[r.id,r]));
+      const localDel = JSON.parse(localStorage.getItem('pne_deleted')||'[]');
+      const gasDel   = Array.isArray(data.deletedIds) ? data.deletedIds : [];
+      const allDel   = new Set([...localDel,...gasDel]);
+      if(gasDel.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDel]));
+      let newCount=0, updatedCount=0;
+      data.records.forEach(gasRec=>{
+        if(allDel.has(gasRec.id)) return;
+        const localRec=localMap.get(gasRec.id);
+        if(!localRec){ localMap.set(gasRec.id,gasRec); newCount++; }
+        else{
+          const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
+          const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
+          if(tGas>tLocal){ localMap.set(gasRec.id,gasRec); updatedCount++; }
         }
-      })
-      .catch(e => console.warn('auto-sync lỗi:', e));
-  }, 60 * 1000); // mỗi 60 giây
+      });
+      if(newCount>0||updatedCount>0){
+        saveAll([...localMap.values()],{noPush:true});
+        render();
+        const parts=[];
+        if(newCount>0) parts.push('🔔 '+newCount+' hồ sơ mới');
+        if(updatedCount>0) parts.push('🔄 '+updatedCount+' cập nhật');
+        showToast(parts.join(' · '),'success',4000);
+      }
+    })
+    .catch(e => console.warn('auto-sync lỗi:', e));
+}
+if(GAS_URL){
+  // 1. Polling 15 giây
+  setInterval(_autoSyncPull, 15 * 1000);
+  // 2. Sync ngay khi tab được focus (chuyển từ tab khác về)
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') _autoSyncPull(); });
+  window.addEventListener('focus', _autoSyncPull);
 }
 </script>
 
