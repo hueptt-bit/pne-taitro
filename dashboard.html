@@ -638,13 +638,18 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           <div class="form-2col">
             <div class="form-row"><label>Số lượng cần in</label><input id="f_voucher_print_qty" type="number" min="1" placeholder="VD: 50" oninput="updateVoucherPreview()"></div>
             <div class="form-row"><label>Trạng thái in</label>
-              <select id="f_voucher_status">
+              <select id="f_voucher_status" onchange="onVoucherStatusChange(this.value)">
                 <option value="">-- Chọn --</option>
                 <option value="chua_in">🖨️ Chưa in</option>
+                <option value="chuyen_in">📤 Chuyển in</option>
                 <option value="da_in">✅ Đã in</option>
                 <option value="da_giao">📦 Đã giao CLB</option>
               </select>
             </div>
+          </div>
+          <div id="voucher_print_deadline_row" class="form-row" style="display:none">
+            <label>📅 Deadline in</label>
+            <input id="f_voucher_print_deadline" type="date">
           </div>
           <div id="voucher_code_preview" style="display:none;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-top:4px;font-size:12px"></div>
         </div>
@@ -1182,31 +1187,39 @@ function generateVoucherCode(){
   return [org,school].filter(x=>x).join('-')+'-'+mm+yy;
 }
 function autoGenVoucherCode(){
-  const code=generateVoucherCode();
+  const prefix=generateVoucherCode();
+  const code=prefix+'.01';
   const el=document.getElementById('f_mavoucher');
   if(el){el.value=code;updateVoucherPreview();}
-  _updateContractVoucherPreview(code);
+  _updateContractVoucherPreview(prefix);
   showToast('✅ Đã tạo mã: '+code,'success',2500);
 }
 function updateVoucherPreview(){
-  const code=(document.getElementById('f_mavoucher')||{}).value||'';
+  const rawCode=(document.getElementById('f_mavoucher')||{}).value||'';
   const qty=parseInt((document.getElementById('f_voucher_print_qty')||{}).value)||0;
   const prevEl=document.getElementById('voucher_code_preview');
   if(!prevEl)return;
-  if(!code||qty<=0){prevEl.style.display='none';return;}
+  if(!rawCode||qty<=0){prevEl.style.display='none';return;}
+  // Extract prefix: strip .NN serial suffix if present (e.g. "YOUTH-BKHN-0526.01" → "YOUTH-BKHN-0526")
+  const m=rawCode.match(/^(.+)\.\d{2}$/);
+  const prefix=m?m[1]:rawCode;
   const show=[];
-  for(let i=1;i<=Math.min(qty,4);i++)show.push(`${code}.${String(i).padStart(2,'0')}`);
+  for(let i=1;i<=Math.min(qty,4);i++)show.push(`${prefix}.${String(i).padStart(2,'0')}`);
   if(qty>5)show.push('…');
-  if(qty>4)show.push(`${code}.${String(qty).padStart(2,'0')}`);
+  if(qty>4)show.push(`${prefix}.${String(qty).padStart(2,'0')}`);
   prevEl.innerHTML=`<span style="font-weight:600;color:var(--tx)">📋 ${qty} mã:</span> <span style="font-family:monospace;color:var(--tx2)">${show.join(' · ')}</span>`;
   prevEl.style.display='';
-  _updateContractVoucherPreview(code,qty);
+  _updateContractVoucherPreview(prefix,qty);
 }
 function _updateContractVoucherPreview(code,qty){
   const el=document.getElementById('contract_voucher_preview');
   if(!el)return;
   const q=qty||parseInt((document.getElementById('f_voucher_print_qty')||{}).value)||0;
   el.innerHTML=q>0?`<b style="font-family:monospace">${code}</b> · ${q} voucher: <span style="font-family:monospace">${code}.01 → ${code}.${String(q).padStart(2,'0')}</span>`:`<b style="font-family:monospace">${code}</b>`;
+}
+function onVoucherStatusChange(val){
+  const row=document.getElementById('voucher_print_deadline_row');
+  if(row) row.style.display=(val==='chuyen_in')?'':'none';
 }
 function cycleLienhe(id,e){e.stopPropagation();const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;const cur=r.lienhe_status||'moi';const idx=LIENHE_CYCLE.indexOf(cur);r.lienhe_status=LIENHE_CYCLE[(idx+1)%LIENHE_CYCLE.length];r.updatedAt=new Date().toISOString();saveAll(a);if(ST.view==='kanban')renderKanban();else if(ST.view==='list')renderList();if(ST.selId===id)renderPanel();}
 function fmtMoney(n){if(!n||n==0)return'—';if(n>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n+'';}
@@ -1614,7 +1627,7 @@ function renderList(){
   sp.forEach(r=>{
     const sm=stageMeta(r.stage);const ot=offerTotal(r);const bp=benefitProgress(r);const exp=ST.expandedRows.has(r.id);const days=daysUntil(r.deadlineDate);
     const hanDays=r.hanvoucher?daysUntil(r.hanvoucher):null;
-    const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};
+    const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};
     const vs=VSTAT_META[r.voucher_status];
     const isChecked=ST.selectedIds.has(r.id);
     h+=`<tr class="data-row${ST.selId===r.id?' selected':''}" onclick="toggleRow('${r.id}')">
@@ -3122,7 +3135,15 @@ function openAddModal(id){
       document.getElementById('f_signing_date').value=r.signing_date||'';
       document.getElementById('f_contract_link').value=r.contract_link||'';
       document.getElementById('f_contract_note').value=r.contract_note||'';
-      document.getElementById('f_hopdong').value=r.hopdong||'';document.getElementById('f_mavoucher').value=r.mavoucher||'';document.getElementById('f_hanvoucher').value=r.hanvoucher||'';document.getElementById('f_voucher_print_qty').value=r.voucher_print_qty||'';document.getElementById('f_voucher_status').value=r.voucher_status||'';document.getElementById('f_anhsukien').value=r.anhsukien||'';document.getElementById('f_data').value=r.data||'';document.getElementById('f_tracking').value=r.tracking||'';
+      document.getElementById('f_hopdong').value=r.hopdong||'';document.getElementById('f_mavoucher').value=r.mavoucher||'';
+      // Auto-fill hạn voucher từ deadlineDate nếu chưa có
+      document.getElementById('f_hanvoucher').value=r.hanvoucher||((!r.hanvoucher&&r.deadlineDate)?r.deadlineDate:'');
+      // Auto-fill số lượng từ neg_items nếu chưa set thủ công
+      {const savedQty=r.voucher_print_qty;const autoQty=(r.neg_items&&r.neg_items.length)?r.neg_items.filter(i=>!i.isCash).reduce((s,i)=>s+(+i.qty||0),0):0;document.getElementById('f_voucher_print_qty').value=savedQty||(autoQty>0?autoQty:'');}
+      document.getElementById('f_voucher_status').value=r.voucher_status||'';
+      document.getElementById('f_voucher_print_deadline').value=r.voucher_print_deadline||'';
+      onVoucherStatusChange(r.voucher_status||'');
+      document.getElementById('f_anhsukien').value=r.anhsukien||'';document.getElementById('f_data').value=r.data||'';document.getElementById('f_tracking').value=r.tracking||'';
       // Test Online fields
       document.getElementById('f_username').value=r.username||'';
       document.getElementById('f_password').value=r.password||'';
@@ -3138,8 +3159,8 @@ function openAddModal(id){
       loadRoomDraftFromRecord(r);
     }
   }else{
-    ['f_org','f_event','f_school','f_school_abbrev','f_event_budget','f_prize_structure','f_activity_list','f_event_budget_chain','f_proposalUrl','f_hangmuc','f_contact','f_phone','f_zalo_group','f_notes','f_proposalText','f_receivedDate','f_deadlineDate','f_final_offer_note','f_contract_note','f_signing_date','f_contract_link','f_hopdong','f_mavoucher','f_hanvoucher','f_voucher_print_qty','f_anhsukien','f_data','f_tracking','f_username','f_password','f_expiry','f_test_account_type','f_test_offer_note'].forEach(fid=>document.getElementById(fid).value='');
-    document.getElementById('f_voucher_status').value='';
+    ['f_org','f_event','f_school','f_school_abbrev','f_event_budget','f_prize_structure','f_activity_list','f_event_budget_chain','f_proposalUrl','f_hangmuc','f_contact','f_phone','f_zalo_group','f_notes','f_proposalText','f_receivedDate','f_deadlineDate','f_final_offer_note','f_contract_note','f_signing_date','f_contract_link','f_hopdong','f_mavoucher','f_hanvoucher','f_voucher_print_qty','f_voucher_print_deadline','f_anhsukien','f_data','f_tracking','f_username','f_password','f_expiry','f_test_account_type','f_test_offer_note'].forEach(fid=>document.getElementById(fid).value='');
+    document.getElementById('f_voucher_status').value='';onVoucherStatusChange('');
     document.getElementById('f_test_platform').value='test_online';
     _negDraft=null;_negTestPkgIdx=null;
     _roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};
@@ -3195,7 +3216,7 @@ function saveRecord(){
   if(_editId){
     const r=a.find(x=>x.id===_editId);
     if(r){
-      r.org=org;r.event=event;r.school=document.getElementById('f_school').value.trim();r.school_abbrev=document.getElementById('f_school_abbrev').value.trim().toUpperCase();r.event_type=document.getElementById('f_event_type').value;r.final_attendance=document.getElementById('f_final_attendance').value.trim();r.event_budget=document.getElementById('f_event_budget').value.trim();r.prize_structure=document.getElementById('f_prize_structure').value.trim();r.activity_list=document.getElementById('f_activity_list').value.trim();r.event_budget_chain=document.getElementById('f_event_budget_chain').value.trim();r.track=document.getElementById('f_track').value;r.cat=document.getElementById('f_cat').value;r.stage=document.getElementById('f_stage').value;r.year=document.getElementById('f_year').value;r.receivedDate=document.getElementById('f_receivedDate').value;r.deadlineDate=document.getElementById('f_deadlineDate').value;r.proposalUrl=document.getElementById('f_proposalUrl').value;r.hangmuc=getHangmucVal();r.contact=contact;r.phone=document.getElementById('f_phone').value.trim();r.zaloGroup=document.getElementById('f_zalo_group').value.trim();r.notes=document.getElementById('f_notes').value;r.proposalText=proposalTextVal;r.lienhe_status=document.getElementById('f_lienhe_status').value;r.final_offer_type=document.getElementById('f_final_offer_type').value;r.final_offer_note=document.getElementById('f_final_offer_note').value;r.contract_status=document.getElementById('f_contract_status').value;r.contract_method=document.getElementById('f_contract_method').value;r.signing_date=document.getElementById('f_signing_date').value;r.contract_link=document.getElementById('f_contract_link').value;r.contract_note=document.getElementById('f_contract_note').value;r.hopdong=document.getElementById('f_hopdong').value.trim();r.mavoucher=document.getElementById('f_mavoucher').value.trim();r.hanvoucher=document.getElementById('f_hanvoucher').value;r.voucher_print_qty=document.getElementById('f_voucher_print_qty').value;r.voucher_status=document.getElementById('f_voucher_status').value;r.anhsukien=document.getElementById('f_anhsukien').value.trim();r.data=document.getElementById('f_data').value.trim();r.tracking=document.getElementById('f_tracking').value.trim();r.username=document.getElementById('f_username').value.trim();r.password=document.getElementById('f_password').value.trim();r.expiry=document.getElementById('f_expiry').value;r.test_platform=document.getElementById('f_test_platform').value;r.test_account_type=document.getElementById('f_test_account_type').value.trim();r.test_offer_note=document.getElementById('f_test_offer_note').value.trim();
+      r.org=org;r.event=event;r.school=document.getElementById('f_school').value.trim();r.school_abbrev=document.getElementById('f_school_abbrev').value.trim().toUpperCase();r.event_type=document.getElementById('f_event_type').value;r.final_attendance=document.getElementById('f_final_attendance').value.trim();r.event_budget=document.getElementById('f_event_budget').value.trim();r.prize_structure=document.getElementById('f_prize_structure').value.trim();r.activity_list=document.getElementById('f_activity_list').value.trim();r.event_budget_chain=document.getElementById('f_event_budget_chain').value.trim();r.track=document.getElementById('f_track').value;r.cat=document.getElementById('f_cat').value;r.stage=document.getElementById('f_stage').value;r.year=document.getElementById('f_year').value;r.receivedDate=document.getElementById('f_receivedDate').value;r.deadlineDate=document.getElementById('f_deadlineDate').value;r.proposalUrl=document.getElementById('f_proposalUrl').value;r.hangmuc=getHangmucVal();r.contact=contact;r.phone=document.getElementById('f_phone').value.trim();r.zaloGroup=document.getElementById('f_zalo_group').value.trim();r.notes=document.getElementById('f_notes').value;r.proposalText=proposalTextVal;r.lienhe_status=document.getElementById('f_lienhe_status').value;r.final_offer_type=document.getElementById('f_final_offer_type').value;r.final_offer_note=document.getElementById('f_final_offer_note').value;r.contract_status=document.getElementById('f_contract_status').value;r.contract_method=document.getElementById('f_contract_method').value;r.signing_date=document.getElementById('f_signing_date').value;r.contract_link=document.getElementById('f_contract_link').value;r.contract_note=document.getElementById('f_contract_note').value;r.hopdong=document.getElementById('f_hopdong').value.trim();r.mavoucher=document.getElementById('f_mavoucher').value.trim();r.hanvoucher=document.getElementById('f_hanvoucher').value;r.voucher_print_qty=document.getElementById('f_voucher_print_qty').value;r.voucher_status=document.getElementById('f_voucher_status').value;r.voucher_print_deadline=document.getElementById('f_voucher_print_deadline').value;r.anhsukien=document.getElementById('f_anhsukien').value.trim();r.data=document.getElementById('f_data').value.trim();r.tracking=document.getElementById('f_tracking').value.trim();r.username=document.getElementById('f_username').value.trim();r.password=document.getElementById('f_password').value.trim();r.expiry=document.getElementById('f_expiry').value;r.test_platform=document.getElementById('f_test_platform').value;r.test_account_type=document.getElementById('f_test_account_type').value.trim();r.test_offer_note=document.getElementById('f_test_offer_note').value.trim();
       r.updatedAt=new Date().toISOString();
       if(negItems!==null){
         r.neg_items=negItems;r.neg_benefits=(negBenefits||[]).filter(b=>!b.isHeader);r.final_offer=negTotal||0;r.neg_pkg_idx=_negPkgIdx;
@@ -3222,7 +3243,7 @@ function saveRecord(){
       // Đã điền offer → Đã offer (chờ duyệt)
       if(['received','reviewing'].includes(autoStage)) autoStage='offered';
     }
-    const newRec={id:uid(),org,event,school:document.getElementById('f_school').value.trim(),school_abbrev:document.getElementById('f_school_abbrev').value.trim().toUpperCase(),event_type:document.getElementById('f_event_type').value,final_attendance:document.getElementById('f_final_attendance').value.trim(),event_budget:document.getElementById('f_event_budget').value.trim(),prize_structure:document.getElementById('f_prize_structure').value.trim(),activity_list:document.getElementById('f_activity_list').value.trim(),event_budget_chain:document.getElementById('f_event_budget_chain').value.trim(),track:document.getElementById('f_track').value,cat:document.getElementById('f_cat').value,stage:autoStage,year:document.getElementById('f_year').value,receivedDate:document.getElementById('f_receivedDate').value,deadlineDate:document.getElementById('f_deadlineDate').value,proposalUrl:document.getElementById('f_proposalUrl').value,hangmuc:getHangmucVal(),contact,phone:document.getElementById('f_phone').value.trim(),zaloGroup:document.getElementById('f_zalo_group').value.trim(),notes:document.getElementById('f_notes').value,proposalText:proposalTextVal,benefits:[],offer:inlineOffer,clbPackages:_extracted.clbPackages||[],approval:_pendingApproval||null,lienhe_status:document.getElementById('f_lienhe_status').value,neg_items:negItems||[],neg_benefits:negBenefits||[],final_offer:negTotal||0,final_offer_type:document.getElementById('f_final_offer_type').value,final_offer_note:document.getElementById('f_final_offer_note').value,contract_status:document.getElementById('f_contract_status').value,contract_method:document.getElementById('f_contract_method').value,signing_date:document.getElementById('f_signing_date').value,contract_link:document.getElementById('f_contract_link').value,contract_note:document.getElementById('f_contract_note').value,hopdong:document.getElementById('f_hopdong').value.trim(),mavoucher:document.getElementById('f_mavoucher').value.trim(),hanvoucher:document.getElementById('f_hanvoucher').value,voucher_print_qty:document.getElementById('f_voucher_print_qty').value,voucher_status:document.getElementById('f_voucher_status').value,anhsukien:document.getElementById('f_anhsukien').value.trim(),data:document.getElementById('f_data').value.trim(),tracking:document.getElementById('f_tracking').value.trim(),username:document.getElementById('f_username').value.trim(),password:document.getElementById('f_password').value.trim(),expiry:document.getElementById('f_expiry').value,test_platform:document.getElementById('f_test_platform').value,test_account_type:document.getElementById('f_test_account_type').value.trim(),test_offer_note:document.getElementById('f_test_offer_note').value.trim()};
+    const newRec={id:uid(),org,event,school:document.getElementById('f_school').value.trim(),school_abbrev:document.getElementById('f_school_abbrev').value.trim().toUpperCase(),event_type:document.getElementById('f_event_type').value,final_attendance:document.getElementById('f_final_attendance').value.trim(),event_budget:document.getElementById('f_event_budget').value.trim(),prize_structure:document.getElementById('f_prize_structure').value.trim(),activity_list:document.getElementById('f_activity_list').value.trim(),event_budget_chain:document.getElementById('f_event_budget_chain').value.trim(),track:document.getElementById('f_track').value,cat:document.getElementById('f_cat').value,stage:autoStage,year:document.getElementById('f_year').value,receivedDate:document.getElementById('f_receivedDate').value,deadlineDate:document.getElementById('f_deadlineDate').value,proposalUrl:document.getElementById('f_proposalUrl').value,hangmuc:getHangmucVal(),contact,phone:document.getElementById('f_phone').value.trim(),zaloGroup:document.getElementById('f_zalo_group').value.trim(),notes:document.getElementById('f_notes').value,proposalText:proposalTextVal,benefits:[],offer:inlineOffer,clbPackages:_extracted.clbPackages||[],approval:_pendingApproval||null,lienhe_status:document.getElementById('f_lienhe_status').value,neg_items:negItems||[],neg_benefits:negBenefits||[],final_offer:negTotal||0,final_offer_type:document.getElementById('f_final_offer_type').value,final_offer_note:document.getElementById('f_final_offer_note').value,contract_status:document.getElementById('f_contract_status').value,contract_method:document.getElementById('f_contract_method').value,signing_date:document.getElementById('f_signing_date').value,contract_link:document.getElementById('f_contract_link').value,contract_note:document.getElementById('f_contract_note').value,hopdong:document.getElementById('f_hopdong').value.trim(),mavoucher:document.getElementById('f_mavoucher').value.trim(),hanvoucher:document.getElementById('f_hanvoucher').value,voucher_print_qty:document.getElementById('f_voucher_print_qty').value,voucher_status:document.getElementById('f_voucher_status').value,voucher_print_deadline:document.getElementById('f_voucher_print_deadline').value,anhsukien:document.getElementById('f_anhsukien').value.trim(),data:document.getElementById('f_data').value.trim(),tracking:document.getElementById('f_tracking').value.trim(),username:document.getElementById('f_username').value.trim(),password:document.getElementById('f_password').value.trim(),expiry:document.getElementById('f_expiry').value,test_platform:document.getElementById('f_test_platform').value,test_account_type:document.getElementById('f_test_account_type').value.trim(),test_offer_note:document.getElementById('f_test_offer_note').value.trim()};
     newRec.roomSponsorships=_roomDraft.filter(e=>e.date||e.purpose||(e.rooms&&e.rooms.some(rm=>rm.capacity)));
     if(_mapsReviewDraft.qty>0)newRec.mapsReview={qty:_mapsReviewDraft.qty,perMap:[..._mapsReviewDraft.perMap]};
     newRec.updatedAt=new Date().toISOString();
@@ -3230,6 +3251,8 @@ function saveRecord(){
   }
   const wasNegSave=negItems!==null&&negItems.length>0;
   const contractStatus=document.getElementById('f_contract_status')?.value||'';
+  const voucherStatusSave=document.getElementById('f_voucher_status')?.value||'';
+  const voucherPrintDeadlineSave=document.getElementById('f_voucher_print_deadline')?.value||'';
   const isNewRecord=!_editId;
   const savedId=_editId||(a[a.length-1]&&a[a.length-1].id);
   _pendingApproval=null;_offerInlineDraft=[];_negDraft=null;_roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};
@@ -3251,6 +3274,26 @@ function saveRecord(){
     showToast('❌ Lưu thất bại: '+e.message,'error',5000);
     console.error('saveRecord error:',e);
     return;
+  }
+  // Gửi Telegram thông báo in nếu chọn "Chuyển in"
+  if(voucherStatusSave==='chuyen_in'&&GAS_URL){
+    const nr=loadAll().find(x=>x.id===savedId);
+    if(nr){
+      fetch(GAS_URL,{method:'POST',body:JSON.stringify({
+        action:'voucherPrintNotify',
+        id:nr.id,
+        org:nr.org,
+        event:nr.event,
+        school:nr.school||'',
+        mavoucher:nr.mavoucher||'',
+        voucher_print_qty:nr.voucher_print_qty||'',
+        voucher_print_deadline:voucherPrintDeadlineSave||nr.voucher_print_deadline||'',
+        neg_items:(nr.neg_items||[]).filter(i=>!i.isCash)
+      })}).then(r=>r.json()).then(d=>{
+        if(d&&d.ok)showToast('📤 Đã gửi thông báo Telegram in voucher!','success',3500);
+        else showToast('⚠️ Lưu OK nhưng Telegram lỗi: '+(d&&d.error||'unknown'),'warn',4000);
+      }).catch(()=>showToast('⚠️ Lưu OK nhưng không gửi được Telegram','warn',3000));
+    }
   }
   closeAddModal();
   // Sau khi lưu: đảm bảo đang nhìn đúng năm & track của record vừa lưu,
