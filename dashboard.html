@@ -651,6 +651,7 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
             <label>📅 Deadline in</label>
             <input id="f_voucher_print_deadline" type="date">
           </div>
+          <div id="voucher_neg_breakdown" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:6px;font-size:12px"></div>
           <div id="voucher_code_preview" style="display:none;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-top:4px;font-size:12px"></div>
         </div>
         <!-- Test Online fields (chỉ hiện cho track Test Online) -->
@@ -1227,6 +1228,23 @@ function _updateContractVoucherPreview(code,qty){
 function onVoucherStatusChange(val){
   const row=document.getElementById('voucher_print_deadline_row');
   if(row) row.style.display=(val==='chuyen_in')?'':'none';
+}
+function renderVoucherBreakdown(negItems){
+  const el=document.getElementById('voucher_neg_breakdown');
+  if(!el)return;
+  const items=(negItems||[]).filter(i=>!i.isCash&&(+i.qty||0)>0);
+  if(!items.length){el.style.display='none';return;}
+  const VTYPE_LABEL={'100%':'100% (9.8M)','80%':'80% (7.84M)','50%':'50% (4.9M)','35%':'35% (3.43M)','30%':'30% (2.94M)','25%':'25% (2.45M)','20%':'20% (1.96M)','15%':'15% (1.47M)','Gấu bông':'Gấu bông (180K)'};
+  const total=items.reduce((s,i)=>s+(+i.qty||0),0);
+  const rows=items.map(i=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #d1fae5">
+    <span style="color:#15803d;font-weight:600">${VTYPE_LABEL[i.type]||i.type}</span>
+    <span style="font-weight:700;color:#166534">${i.qty} voucher</span>
+  </div>`).join('');
+  el.innerHTML=`<div style="font-weight:700;color:#15803d;margin-bottom:6px">📦 Chi tiết in theo gói đàm phán</div>${rows}
+    <div style="display:flex;justify-content:space-between;padding-top:5px;font-weight:700;color:#14532d">
+      <span>Tổng cộng</span><span>${total} voucher</span>
+    </div>`;
+  el.style.display='';
 }
 function cycleLienhe(id,e){e.stopPropagation();const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;const cur=r.lienhe_status||'moi';const idx=LIENHE_CYCLE.indexOf(cur);r.lienhe_status=LIENHE_CYCLE[(idx+1)%LIENHE_CYCLE.length];r.updatedAt=new Date().toISOString();saveAll(a);if(ST.view==='kanban')renderKanban();else if(ST.view==='list')renderList();if(ST.selId===id)renderPanel();}
 function fmtMoney(n){if(!n||n==0)return'—';if(n>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n+'';}
@@ -3152,6 +3170,7 @@ function openAddModal(id){
       document.getElementById('f_voucher_status').value=r.voucher_status||'';
       document.getElementById('f_voucher_print_deadline').value=r.voucher_print_deadline||'';
       onVoucherStatusChange(r.voucher_status||'');
+      renderVoucherBreakdown(r.neg_items||[]);
       document.getElementById('f_anhsukien').value=r.anhsukien||'';document.getElementById('f_data').value=r.data||'';document.getElementById('f_tracking').value=r.tracking||'';
       // Test Online fields
       document.getElementById('f_username').value=r.username||'';
