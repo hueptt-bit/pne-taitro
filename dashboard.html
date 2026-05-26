@@ -3395,6 +3395,15 @@ function switchModalTab(tab){
   if(tab==='exec'){
     const r=_editId?loadAll().find(x=>x.id===_editId):null;
     renderMapsReviewExecBox(r);
+    // Re-render voucher breakdown từ _negDraft (luôn mới nhất) hoặc r.neg_items
+    const negSrc=(_negDraft&&_negDraft.items&&_negDraft.items.length)?_negDraft.items:(r&&r.neg_items||[]);
+    renderVoucherBreakdown(negSrc);
+    // Auto-fill qty nếu chưa có
+    const qtyEl=document.getElementById('f_voucher_print_qty');
+    if(qtyEl&&!qtyEl.value){
+      const autoQty=negSrc.filter(i=>!i.isCash).reduce((s,i)=>s+(+i.qty||0),0);
+      if(autoQty>0)qtyEl.value=autoQty;
+    }
     // fb16: Auto-sync trường Hợp đồng từ tab Hợp đồng sang tab Thực thi
     const contractLink=document.getElementById('f_contract_link');
     const hopdong=document.getElementById('f_hopdong');
