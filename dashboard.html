@@ -1803,7 +1803,7 @@ function renderKanban(){
                 ${ot===0&&(r.stage==='offered'||r.stage==='negotiating')?`<div style="font-size:11px;color:#d97706;margin-top:5px">⚡ Chưa tính offer</div>`:''}
                 ${needsApproval(r)?`<div style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:700;margin-top:5px">⏳ Chờ duyệt</div>`:''}
                 ${r.stage==='signing'?(()=>{const cs={cho_hop_dong:{bg:'#fef3c7',color:'#92400e',icon:'⏳',label:'Chờ hợp đồng'},dang_dien:{bg:'#dbeafe',color:'#1e40af',icon:'✏️',label:'Đang điền TT'},cho_ky:{bg:'#ede9fe',color:'#5b21b6',icon:'📋',label:'Chờ ký'},da_ky:{bg:'#dcfce7',color:'#14532d',icon:'✅',label:'Đã ký xong'}};const c=cs[r.contract_status];return c?`<div style="display:inline-flex;align-items:center;gap:4px;background:${c.bg};color:${c.color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:5px">${c.icon} ${c.label}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;color:#6b7280;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;margin-top:5px">📄 Chưa cập nhật HĐ</div>`;})():''}
-                ${(()=>{const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};const vs=VSTAT_META[r.voucher_status];if(r.mavoucher||r.voucher_status){const dl=r.voucher_print_deadline?(()=>{const d=daysUntil(r.voucher_print_deadline);if(d===null)return'';return d<=0?`<span style="font-size:10px;color:#dc2626;font-weight:700">⚠️ Đã qua deadline</span>`:d<=3?`<span style="font-size:10px;color:#d97706;font-weight:700">⏰ Còn ${d} ngày in</span>`:'';})():'';return`<div style="margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${vs?`<div style="display:inline-flex;align-items:center;gap:4px;background:${vs.bg};color:${vs.c};border:1px solid ${vs.c}33;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${vs.i} ${vs.t}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">🎟️ Có voucher</div>`}${r.voucher_print_qty?`<span style="font-size:10.5px;color:#94a3b8;font-weight:500">×${r.voucher_print_qty}</span>`:''} ${dl}</div>`;}return'';})()}
+                ${(()=>{const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};const vs=VSTAT_META[r.voucher_status||(r.mavoucher?'chua_in':'')];if(r.mavoucher||r.voucher_status){const dl=r.voucher_print_deadline?(()=>{const d=daysUntil(r.voucher_print_deadline);if(d===null)return'';return d<=0?`<span style="font-size:10px;color:#dc2626;font-weight:700">⚠️ Đã qua deadline</span>`:d<=3?`<span style="font-size:10px;color:#d97706;font-weight:700">⏰ Còn ${d} ngày in</span>`:'';})():'';return`<div style="margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${vs?`<div style="display:inline-flex;align-items:center;gap:4px;background:${vs.bg};color:${vs.c};border:1px solid ${vs.c}33;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${vs.i} ${vs.t}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">🎟️ Có voucher</div>`}${r.voucher_print_qty?`<span style="font-size:10.5px;color:#94a3b8;font-weight:500">×${r.voucher_print_qty}</span>`:''} ${dl}</div>`;}return'';})()}
                 ${r.trackingUrl?`<div style="margin-top:5px"><a href="${r.trackingUrl}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #bfdbfe">📊 Tracking</a></div>`:''}
               </div>`;}).join('')}
           </div>
@@ -3395,8 +3395,9 @@ function switchModalTab(tab){
   if(tab==='exec'){
     const r=_editId?loadAll().find(x=>x.id===_editId):null;
     renderMapsReviewExecBox(r);
-    // Re-render voucher breakdown từ _negDraft (luôn mới nhất) hoặc r.neg_items
-    const negSrc=(_negDraft&&_negDraft.items&&_negDraft.items.length)?_negDraft.items:(r&&r.neg_items||[]);
+    // Re-render voucher breakdown: ưu tiên _negDraft → neg_items → offer.items
+    const _offerFallback=(r&&r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);
+    const negSrc=(_negDraft&&_negDraft.items&&_negDraft.items.length)?_negDraft.items:((r&&r.neg_items&&r.neg_items.length)?r.neg_items:_offerFallback);
     renderVoucherBreakdown(negSrc);
     // Auto-fill qty nếu chưa có
     const qtyEl=document.getElementById('f_voucher_print_qty');
@@ -3467,12 +3468,12 @@ function openAddModal(id){
       document.getElementById('f_hopdong').value=r.hopdong||'';document.getElementById('f_mavoucher').value=r.mavoucher||'';
       // Auto-fill hạn voucher từ deadlineDate nếu chưa có
       document.getElementById('f_hanvoucher').value=r.hanvoucher||((!r.hanvoucher&&r.deadlineDate)?r.deadlineDate:'');
-      // Auto-fill số lượng từ neg_items nếu chưa set thủ công
-      {const savedQty=r.voucher_print_qty;const autoQty=(r.neg_items&&r.neg_items.length)?r.neg_items.filter(i=>!i.isCash).reduce((s,i)=>s+(+i.qty||0),0):0;document.getElementById('f_voucher_print_qty').value=savedQty||(autoQty>0?autoQty:'');}
-      document.getElementById('f_voucher_status').value=r.voucher_status||'';
-      document.getElementById('f_voucher_print_deadline').value=r.voucher_print_deadline||'';
-      onVoucherStatusChange(r.voucher_status||'');
-      renderVoucherBreakdown(r.neg_items||[]);
+      // Auto-fill số lượng từ neg_items (hoặc offer.items nếu neg_items chưa lưu)
+      {const savedQty=r.voucher_print_qty;const _ns=(r.neg_items&&r.neg_items.length)?r.neg_items:(r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);const autoQty=_ns.reduce((s,i)=>s+(+i.qty||0),0);document.getElementById('f_voucher_print_qty').value=savedQty||(autoQty>0?autoQty:'');}
+      // Mặc định trạng thái 'chua_in' nếu đã có mã voucher nhưng chưa chọn status
+      {const vstat=r.voucher_status||(r.mavoucher?'chua_in':'');document.getElementById('f_voucher_status').value=vstat;document.getElementById('f_voucher_print_deadline').value=r.voucher_print_deadline||'';onVoucherStatusChange(vstat);}
+      // Render breakdown từ neg_items hoặc offer.items
+      {const _ns2=(r.neg_items&&r.neg_items.length)?r.neg_items:(r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);renderVoucherBreakdown(_ns2);}
       document.getElementById('f_anhsukien').value=r.anhsukien||'';document.getElementById('f_data').value=r.data||'';document.getElementById('f_tracking').value=r.tracking||'';
       // Test Online fields
       document.getElementById('f_username').value=r.username||'';
