@@ -1035,7 +1035,7 @@ function pushToGAS(records){
 }
 
 // ══ STATE ══
-let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,voucherFilter:false,voucherBoardStatus:null,expandedRows:new Set(),selectedIds:new Set()};
+let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,voucherFilter:false,voucherBoardStatus:null,expandedRows:new Set(),selectedIds:new Set(),rs:{tab:'theo_ngay',date:new Date().toISOString().slice(0,10),room:'P.22',weekStart:''}};
 let _charts={};
 let _calcId=null; // record being calculated
 let _calcDraft=[]; // current calc quantities [{type, qty, cashVal}]
@@ -1387,99 +1387,290 @@ function setVoucherFilter(){ST.voucherFilter=true;ST.stageFilter=null;ST.approva
 function setYear(y){ST.year=y;render();}
 
 // ── ROOM SCHEDULE ──
+// Mock data — thay bằng API khi có
+const RS_ROOMS=[
+  {id:'P.17',label:'P.17',cap:20},{id:'P.20',label:'P.20',cap:12},{id:'P.21',label:'P.21',cap:12},
+  {id:'P.22',label:'P.22',cap:15},{id:'P.23A',label:'P.23A',cap:8},{id:'P.23B',label:'P.23B',cap:9},
+  {id:'P.24',label:'P.24',cap:10},{id:'P.25',label:'P.25',cap:6},{id:'P.25A',label:'P.25A',cap:15},
+  {id:'P.25B',label:'P.25B',cap:12},{id:'P.26',label:'P.26',cap:10},{id:'P.54',label:'P.54',cap:15},
+  {id:'P.55',label:'P.55',cap:20},{id:'P.56',label:'P.56',cap:20},{id:'P.60',label:'P.60',cap:6},
+  {id:'P.61',label:'P.61',cap:12},{id:'P.62',label:'P.62',cap:8},{id:'P.63',label:'P.63',cap:12},
+  {id:'P.64',label:'P.64',cap:4},{id:'P.65',label:'P.65',cap:10},{id:'P.71',label:'P.71',cap:10},
+];
+// Màu theo loại lớp
+function rsBlockColor(code){
+  if(!code)return{bg:'#9ca3af',fg:'#fff'};
+  if(code.startsWith('Cho thuê'))return{bg:'#9ca3af',fg:'#fff'};
+  const c=code.toUpperCase();
+  if(c.includes('OFFDEA')||c.includes('OFDEA'))return{bg:'#ef4444',fg:'#fff'};
+  if(c.includes('OFFRA')||c.includes('OFFRB'))return{bg:'#22c55e',fg:'#fff'};
+  if(c.includes('THTHOF')||c.includes('THOF'))return{bg:'#06b6d4',fg:'#fff'};
+  if(c.includes('THKRO'))return{bg:'#f472b6',fg:'#fff'};
+  if(c.includes('OFCNS'))return{bg:'#a855f7',fg:'#fff'};
+  if(c.includes('CTDE')||c.includes('CTDI'))return{bg:'#f97316',fg:'#fff'};
+  if(c.includes('THESO'))return{bg:'#eab308',fg:'#fff'};
+  const hash=code.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const palette=['#6366f1','#0ea5e9','#10b981','#f59e0b','#8b5cf6'];
+  return{bg:palette[hash%palette.length],fg:'#fff'};
+}
+// Mock sessions cho một ngày cụ thể (giữ nguyên theo ngày trong tuần)
+function rsMockSessions(dateStr){
+  const d=new Date(dateStr+'T00:00:00');const dow=d.getDay();// 0=CN,1=T2,...
+  const sessions=[];
+  const base=[
+    {room:'P.23B',code:'OFDEA1-322',teacher:'Võ Minh Thái',start:'10:00',end:'12:00',hv:2,cap:9},
+    {room:'P.23A',code:'OFFRA2-74',teacher:'Hoàng Ngọc Lâm',start:'12:30',end:'13:00',hv:8,cap:8},
+    {room:'P.23A',code:'OFDEA2-156',teacher:'Nguyễn Thị Hoài Linh',start:'15:45',end:'17:15',hv:9,cap:8},
+    {room:'P.25',code:'OFCNSC-39',teacher:'Phan Trinh Dinh',start:'17:00',end:'18:30',hv:1,cap:6},
+    {room:'P.23A',code:'THESOFA1.1-106',teacher:'Lưu Vũ Quốc Gia',start:'18:00',end:'20:00',hv:6,cap:8},
+    {room:'P.25',code:'OFFRB2-18',teacher:'Tô Lê Sang',start:'19:00',end:'21:00',hv:1,cap:6},
+    {room:'P.20',code:'HFROFA1.1-403',teacher:'An Phạm Diệu Châu',start:'18:30',end:'20:45',hv:6,cap:12},
+    {room:'P.21',code:'THKROFSC1.2-22',teacher:'Nguyễn Đức Thanh Trúc',start:'18:30',end:'20:45',hv:6,cap:12},
+    {room:'P.22',code:'THTHOFCB2-247',teacher:'Phạm Châu Hải My',start:'18:30',end:'20:45',hv:7,cap:15},
+    {room:'P.25A',code:'THTHOFTC1-135',teacher:'Dương Xuân Anh',start:'18:30',end:'20:45',hv:6,cap:15},
+    {room:'P.25B',code:'THTHOFTC1-134',teacher:'Phạm Sỹ Hiến',start:'18:30',end:'20:45',hv:8,cap:12},
+    {room:'P.22',code:'Cho thuê: Hoàng Mai (Họp nội bộ Saigon Kingland)',teacher:'',start:'08:00',end:'17:00',hv:0,cap:15},
+    {room:'P.54',code:'Cho thuê: Phúc Vinh (BUSINESS FRENCH REVISION)',teacher:'',start:'17:00',end:'21:00',hv:0,cap:15},
+    {room:'P.55',code:'Cho thuê: Anh Đào Mạnh Linh',teacher:'',start:'18:30',end:'21:00',hv:0,cap:20},
+    {room:'P.60',code:'OFTHTC-5',teacher:'Nguyễn Thị Hồng Vân',start:'13:00',end:'14:30',hv:6,cap:6},
+    {room:'P.61',code:'CTDEOFA1-401',teacher:'Trần Văn An',start:'18:30',end:'20:45',hv:10,cap:12},
+  ];
+  // Filter bỏ 1 số sessions theo ngày trong tuần để tạo sự đa dạng
+  base.forEach((s,i)=>{if((i+dow)%3!==0||s.code.startsWith('Cho thuê'))sessions.push(s);});
+  return sessions;
+}
+function rsMockWeekSessions(roomId,weekStart){
+  const sessions={};
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart+'T00:00:00');d.setDate(d.getDate()+i);
+    const ds=d.toISOString().slice(0,10);
+    const all=rsMockSessions(ds).filter(s=>s.room===roomId);
+    // Thêm Cho thuê: PNE theo room
+    if(roomId==='P.22'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:15});
+    if(roomId==='P.14'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:20});
+    sessions[ds]=all;
+  }
+  return sessions;
+}
+function rsTimeToMin(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+const RS_START=7*60;// 07:00
+const RS_END=22*60; // 22:00
+const RS_SLOT=30;   // 30 phút mỗi hàng
+const RS_ROW_H=40;  // px mỗi hàng
+
+function rsNavDate(delta){
+  const d=new Date(ST.rs.date+'T00:00:00');d.setDate(d.getDate()+delta);
+  ST.rs.date=d.toISOString().slice(0,10);renderRoomSchedule();
+}
+function rsSetDate(v){ST.rs.date=v;renderRoomSchedule();}
+function rsSetRoom(v){ST.rs.room=v;renderRoomSchedule();}
+function rsNavWeek(delta){
+  const d=new Date(ST.rs.weekStart+'T00:00:00');d.setDate(d.getDate()+delta*7);
+  ST.rs.weekStart=d.toISOString().slice(0,10);renderRoomSchedule();
+}
+function rsSetTab(t){ST.rs.tab=t;renderRoomSchedule();}
+
 function renderRoomSchedule(){
   const main=document.getElementById('content');
-  const allRecs=loadAll(); // all tracks, all years — room schedule is global
-  // Flatten all room bookings
-  const bookings=[];
-  allRecs.forEach(r=>{
-    if(r.roomSponsorships&&r.roomSponsorships.length){
-      r.roomSponsorships.forEach(rb=>{
-        bookings.push({...rb,org:r.org,event:r.event,recId:r.id,stage:r.stage,track:r.track,year:r.year});
-      });
-    }
-  });
-  // Sort by date (undated last)
-  bookings.sort((a,b)=>{
-    if(!a.date&&!b.date)return 0;
-    if(!a.date)return 1;
-    if(!b.date)return -1;
-    return a.date.localeCompare(b.date);
-  });
-  const today=new Date().toISOString().slice(0,10);
-  const upcoming=bookings.filter(b=>!b.date||b.date>=today);
-  const past=bookings.filter(b=>b.date&&b.date<today);
+  // Init weekStart nếu chưa có
+  if(!ST.rs.weekStart){
+    const d=new Date(ST.rs.date+'T00:00:00');
+    const day=d.getDay();const diff=day===0?-6:1-day;
+    d.setDate(d.getDate()+diff);ST.rs.weekStart=d.toISOString().slice(0,10);
+  }
+  const tab=ST.rs.tab;
+  const DOW_VI=['CN','T2','T3','T4','T5','T6','T7'];
 
-  function bookingRow(b,isPast){
-    const sm=STAGES.find(s=>s.id===b.stage)||STAGES[0];
-    const dateStr=b.date?new Date(b.date+'T00:00:00').toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):'Chưa xác định';
-    const isToday=b.date===today;
-    return`<tr style="${isPast?'opacity:.6':''}${isToday?'background:#fef9c3':''}" onclick="openPanel('${b.recId}')" class="row-hover" style="cursor:pointer">
-      <td style="padding:10px 12px;font-size:13px;font-weight:${isToday?'700':'500'};color:${isToday?'#b45309':'var(--tx)'}">
-        ${isToday?'⭐ ':''}${dateStr}
-      </td>
-      <td style="padding:10px 8px;font-size:13px;font-weight:600;color:var(--tx)">${b.org}</td>
-      <td style="padding:10px 8px;font-size:12px;color:var(--tx2)">${b.event||'—'}</td>
-      <td style="padding:10px 8px;text-align:center;font-size:13px;font-weight:700;color:var(--acc)">${b.numRooms||1}</td>
-      <td style="padding:10px 8px;text-align:center;font-size:13px;color:var(--tx2)">${b.capacity?b.capacity+' người':'—'}</td>
-      <td style="padding:10px 8px;font-size:12.5px;color:var(--tx)">${b.purpose||'—'}</td>
-      <td style="padding:10px 8px"><span class="stage-badge" style="background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
-    </tr>`;
+  // ── CSS cho grid ──
+  const gridCss=`
+    .rs-wrap{padding:0;display:flex;flex-direction:column;height:100%;overflow:hidden}
+    .rs-toolbar{padding:12px 20px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
+    .rs-tab{padding:7px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:#fff;color:var(--tx2);transition:.15s;font-family:inherit}
+    .rs-tab.active{border-color:var(--acc);background:var(--acc3);color:var(--acc)}
+    .rs-date-nav{display:flex;align-items:center;gap:4px}
+    .rs-date-nav button{width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:14px;color:var(--tx2);display:flex;align-items:center;justify-content:center;transition:.15s}
+    .rs-date-nav button:hover{background:var(--bg2)}
+    .rs-date-nav input{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;font-family:inherit;color:var(--tx);background:#fff;cursor:pointer}
+    .rs-room-sel{border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:13px;font-family:inherit;color:var(--tx);background:#fff;cursor:pointer}
+    .rs-today-btn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--tx2);transition:.15s;font-family:inherit}
+    .rs-today-btn:hover{background:var(--bg2)}
+    .rs-grid-wrap{flex:1;overflow:auto;min-height:0}
+    .rs-grid{display:flex;min-width:max-content}
+    .rs-time-col{width:70px;flex-shrink:0;position:sticky;left:0;z-index:3;background:#fff;border-right:1px solid var(--border)}
+    .rs-time-cell{height:${RS_ROW_H}px;display:flex;align-items:flex-start;justify-content:flex-end;padding-right:8px;padding-top:2px;font-size:11px;color:var(--tx3);font-weight:500;box-sizing:border-box;border-top:1px dashed var(--border2)}
+    .rs-time-cell.hour{border-top:1px solid var(--border2);color:var(--tx2);font-weight:600}
+    .rs-room-col{flex:1;min-width:130px;position:relative;border-right:1px solid var(--border)}
+    .rs-room-head{position:sticky;top:0;z-index:2;background:#f8fafc;border-bottom:2px solid var(--border);padding:6px 8px;text-align:center}
+    .rs-room-name{font-size:13px;font-weight:700;color:var(--tx)}
+    .rs-room-cap{font-size:11px;color:var(--tx3)}
+    .rs-room-body{position:relative;height:${(RS_END-RS_START)/RS_SLOT*RS_ROW_H}px}
+    .rs-slot{height:${RS_ROW_H}px;border-top:1px dashed var(--border2);box-sizing:border-box}
+    .rs-slot.hour{border-top:1px solid var(--border2)}
+    .rs-block{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 6px;overflow:hidden;cursor:default;font-size:11px;line-height:1.3;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+    .rs-block-code{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .rs-block-teacher{opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+    .rs-block-time{opacity:.75;font-size:10px;margin-top:1px}
+    .rs-block-hv{opacity:.8;font-size:10px}
+    .rs-day-col{flex:1;min-width:140px;position:relative;border-right:1px solid var(--border)}
+    .rs-day-head{position:sticky;top:0;z-index:2;background:#f8fafc;border-bottom:2px solid var(--border);padding:6px 8px;text-align:center}
+    .rs-day-name{font-size:12px;font-weight:700;color:var(--tx)}
+    .rs-day-date{font-size:11px;color:var(--tx3)}
+    .rs-day-head.today-col{background:#eff6ff;border-bottom-color:var(--acc)}
+    .rs-day-head.today-col .rs-day-name{color:var(--acc)}
+    .rs-notice{background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:8px 14px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:6px;margin:10px 20px 0}
+  `;
+
+  const todayStr=new Date().toISOString().slice(0,10);
+
+  // ── Render Theo Ngày ──
+  function renderTheoNgay(){
+    const dateStr=ST.rs.date;
+    const d=new Date(dateStr+'T00:00:00');
+    const sessions=rsMockSessions(dateStr);
+    const dateLabel=d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // Tính HV/cap mỗi phòng
+    function roomHV(roomId){
+      const s=sessions.find(s=>s.room===roomId&&!s.code.startsWith('Cho thuê'));
+      return s?`${s.hv}/${s.cap}`:'';
+    }
+
+    const slots=[];
+    for(let m=RS_START;m<RS_END;m+=RS_SLOT){
+      const h=Math.floor(m/60),min=m%60;
+      slots.push({m,label:`${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`,isHour:min===0});
+    }
+
+    function blockHtml(s){
+      const startM=rsTimeToMin(s.start),endM=rsTimeToMin(s.end);
+      const top=(startM-RS_START)/RS_SLOT*RS_ROW_H;
+      const height=Math.max((endM-startM)/RS_SLOT*RS_ROW_H,RS_ROW_H);
+      const {bg,fg}=rsBlockColor(s.code);
+      const isCho=s.code.startsWith('Cho thuê');
+      return`<div class="rs-block" style="top:${top}px;height:${height}px;background:${bg};color:${fg}">
+        <div class="rs-block-code">${s.code}</div>
+        ${s.teacher&&!isCho?`<div class="rs-block-teacher">${s.teacher}</div>`:''}
+        <div class="rs-block-time">${s.start} – ${s.end}</div>
+        ${s.hv&&!isCho?`<div class="rs-block-hv">${s.hv} HV</div>`:''}
+      </div>`;
+    }
+
+    return`
+      <div class="rs-toolbar">
+        <button class="rs-tab ${tab==='theo_ngay'?'active':''}" onclick="rsSetTab('theo_ngay')">Theo ngày</button>
+        <button class="rs-tab ${tab==='theo_phong'?'active':''}" onclick="rsSetTab('theo_phong')">Theo phòng học</button>
+        <div class="rs-date-nav" style="margin-left:12px">
+          <button onclick="rsNavDate(-1)">‹</button>
+          <input type="date" value="${dateStr}" onchange="rsSetDate(this.value)" style="font-weight:${dateStr===todayStr?'700':'400'}">
+          <button onclick="rsNavDate(1)">›</button>
+        </div>
+        <button class="rs-today-btn" onclick="ST.rs.date='${todayStr}';renderRoomSchedule()">Hôm nay</button>
+        <span style="font-size:12px;color:var(--tx3);margin-left:4px">${dateLabel}</span>
+        <div style="margin-left:auto;background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+      </div>
+      <div class="rs-grid-wrap">
+        <div class="rs-grid">
+          <div class="rs-time-col">
+            <div style="height:50px;position:sticky;top:0;z-index:4;background:#fff;border-bottom:2px solid var(--border);border-right:1px solid var(--border)"></div>
+            ${slots.map(s=>`<div class="rs-time-cell ${s.isHour?'hour':''}">${s.isHour?s.label:''}</div>`).join('')}
+          </div>
+          ${RS_ROOMS.map(room=>{
+            const roomSessions=sessions.filter(s=>s.room===room.id);
+            const hvInfo=roomSessions.filter(s=>!s.code.startsWith('Cho thuê'));
+            const totalHV=hvInfo.reduce((a,s)=>a+s.hv,0);
+            const totalCap=hvInfo.reduce((a,s)=>a+s.cap,0);
+            return`<div class="rs-room-col">
+              <div class="rs-room-head" style="height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div class="rs-room-name">${room.label}</div>
+                <div class="rs-room-cap">HV: ${totalHV?totalHV+'/'+totalCap:'—'}</div>
+              </div>
+              <div class="rs-room-body">
+                ${slots.map(s=>`<div class="rs-slot ${s.isHour?'hour':''}"></div>`).join('')}
+                ${roomSessions.map(s=>blockHtml(s)).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
   }
 
-  main.innerHTML=`
-    <div style="padding:24px 28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-        <div style="font-size:20px">🏫</div>
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--tx)">Lịch Tài Trợ Địa Điểm</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px">Tổng hợp tất cả lịch đặt phòng — mọi năm & track</div>
-        </div>
-        <div style="margin-left:auto;background:var(--acc3);color:var(--acc);font-size:13px;font-weight:700;padding:6px 14px;border-radius:20px">${bookings.length} lịch</div>
-      </div>
+  // ── Render Theo Phòng Học ──
+  function renderTheoPhong(){
+    const roomId=ST.rs.room;
+    const weekStart=ST.rs.weekStart;
+    const wsDate=new Date(weekStart+'T00:00:00');
+    const weDate=new Date(weekStart+'T00:00:00');weDate.setDate(weDate.getDate()+6);
+    const weDateStr=weDate.toISOString().slice(0,10);
+    const wLabel=`${wsDate.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})} → ${weDate.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
 
-      ${bookings.length===0?`
-        <div style="text-align:center;padding:60px 20px;background:var(--bg2);border-radius:14px;border:1.5px dashed var(--border)">
-          <div style="font-size:40px;margin-bottom:12px">🏫</div>
-          <div style="font-weight:700;font-size:15px;color:var(--tx);margin-bottom:6px">Chưa có lịch tài trợ phòng nào</div>
-          <div style="font-size:13px;color:var(--tx3)">Mở hồ sơ → tab Offer → bật <strong>Tài trợ địa điểm</strong> để thêm lịch</div>
-        </div>`:`
-      ${upcoming.length>0?`
-        <div style="font-weight:700;font-size:13px;color:var(--tx2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📅 Sắp diễn ra (${upcoming.length})</div>
-        <div style="background:var(--bg2);border-radius:12px;overflow:hidden;margin-bottom:24px;border:1.5px solid var(--border)">
-          <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="background:var(--bg3);border-bottom:1.5px solid var(--border)">
-              <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Ngày</th>
-              <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">CLB / Đơn vị</th>
-              <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Sự kiện</th>
-              <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Số phòng</th>
-              <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Sức chứa</th>
-              <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Mục đích</th>
-              <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Trạng thái</th>
-            </tr></thead>
-            <tbody>${upcoming.map(b=>bookingRow(b,false)).join('')}</tbody>
-          </table>
-        </div>`:''}
-      ${past.length>0?`
-        <details style="margin-top:8px">
-          <summary style="font-weight:700;font-size:13px;color:var(--tx3);cursor:pointer;padding:6px 0;text-transform:uppercase;letter-spacing:.5px">🕐 Đã qua (${past.length})</summary>
-          <div style="background:var(--bg2);border-radius:12px;overflow:hidden;margin-top:10px;border:1.5px solid var(--border)">
-            <table style="width:100%;border-collapse:collapse">
-              <thead><tr style="background:var(--bg3);border-bottom:1.5px solid var(--border)">
-                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Ngày</th>
-                <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">CLB / Đơn vị</th>
-                <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Sự kiện</th>
-                <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Số phòng</th>
-                <th style="padding:8px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Sức chứa</th>
-                <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Mục đích</th>
-                <th style="padding:8px 8px;text-align:left;font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px">Trạng thái</th>
-              </tr></thead>
-              <tbody>${past.map(b=>bookingRow(b,true)).join('')}</tbody>
-            </table>
+    const weekSessions=rsMockWeekSessions(roomId,weekStart);
+    const days=[];
+    for(let i=0;i<7;i++){
+      const d=new Date(weekStart+'T00:00:00');d.setDate(d.getDate()+i);
+      days.push({ds:d.toISOString().slice(0,10),dow:DOW_VI[d.getDay()],d});
+    }
+
+    const slots=[];
+    for(let m=RS_START;m<RS_END;m+=RS_SLOT){
+      const h=Math.floor(m/60),min=m%60;
+      slots.push({m,label:`${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`,isHour:min===0});
+    }
+
+    function blockHtml(s){
+      const startM=rsTimeToMin(s.start),endM=rsTimeToMin(s.end);
+      const top=(startM-RS_START)/RS_SLOT*RS_ROW_H;
+      const height=Math.max((endM-startM)/RS_SLOT*RS_ROW_H,RS_ROW_H);
+      const {bg,fg}=rsBlockColor(s.code);
+      const isCho=s.code.startsWith('Cho thuê');
+      return`<div class="rs-block" style="top:${top}px;height:${height}px;background:${bg};color:${fg}">
+        <div class="rs-block-code">${s.code}</div>
+        ${s.teacher&&!isCho?`<div class="rs-block-teacher">${s.teacher}</div>`:''}
+        <div class="rs-block-time">${s.start} – ${s.end}</div>
+        ${s.hv&&!isCho?`<div class="rs-block-hv">${s.hv} HV</div>`:''}
+      </div>`;
+    }
+
+    const room=RS_ROOMS.find(r=>r.id===roomId)||RS_ROOMS[0];
+
+    return`
+      <div class="rs-toolbar">
+        <button class="rs-tab ${tab==='theo_ngay'?'active':''}" onclick="rsSetTab('theo_ngay')">Theo ngày</button>
+        <button class="rs-tab ${tab==='theo_phong'?'active':''}" onclick="rsSetTab('theo_phong')">Theo phòng học</button>
+        <select class="rs-room-sel" onchange="rsSetRoom(this.value)" style="margin-left:12px">
+          ${RS_ROOMS.map(r=>`<option value="${r.id}" ${r.id===roomId?'selected':''}>${r.label} (${r.cap} người)</option>`).join('')}
+        </select>
+        <div class="rs-date-nav">
+          <button onclick="rsNavWeek(-1)">‹</button>
+          <span style="font-size:13px;font-weight:600;color:var(--tx);padding:0 8px">${wLabel}</span>
+          <button onclick="rsNavWeek(1)">›</button>
+        </div>
+        <button class="rs-today-btn" onclick="(()=>{ST.rs.weekStart='';ST.rs.date='${todayStr}';renderRoomSchedule()})()">Tuần này</button>
+        <div style="margin-left:auto;background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+      </div>
+      <div class="rs-grid-wrap">
+        <div class="rs-grid">
+          <div class="rs-time-col">
+            <div style="height:56px;position:sticky;top:0;z-index:4;background:#fff;border-bottom:2px solid var(--border);border-right:1px solid var(--border)"></div>
+            ${slots.map(s=>`<div class="rs-time-cell ${s.isHour?'hour':''}">${s.isHour?s.label:''}</div>`).join('')}
           </div>
-        </details>`:''}
-      `}
-    </div>`;
+          ${days.map(({ds,dow,d})=>{
+            const daySessions=weekSessions[ds]||[];
+            const isToday=ds===todayStr;
+            return`<div class="rs-day-col">
+              <div class="rs-day-head ${isToday?'today-col':''}" style="height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div class="rs-day-name">${d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})} (${dow})</div>
+              </div>
+              <div class="rs-room-body">
+                ${slots.map(s=>`<div class="rs-slot ${s.isHour?'hour':''}"></div>`).join('')}
+                ${daySessions.map(s=>blockHtml(s)).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  main.innerHTML=`<style>${gridCss}</style><div class="rs-wrap">${tab==='theo_ngay'?renderTheoNgay():renderTheoPhong()}</div>`;
 }
 
 // ── OVERVIEW ──
