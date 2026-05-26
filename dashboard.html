@@ -870,6 +870,7 @@ const ICO={
   list:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
   chart:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>',
   room:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  voucher:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>',
   search:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
   edit:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
   trash:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
@@ -1034,7 +1035,7 @@ function pushToGAS(records){
 }
 
 // ══ STATE ══
-let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,expandedRows:new Set(),selectedIds:new Set()};
+let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,voucherFilter:false,voucherBoardStatus:null,expandedRows:new Set(),selectedIds:new Set()};
 let _charts={};
 let _calcId=null; // record being calculated
 let _calcDraft=[]; // current calc quantities [{type, qty, cashVal}]
@@ -1279,6 +1280,7 @@ function render(){
   else if(ST.view==='list')renderList();
   else if(ST.view==='room_schedule')renderRoomSchedule();
   else if(ST.view==='stats')renderStats();
+  else if(ST.view==='voucher_board')renderVoucherBoard();
   else if(ST.view==='log')renderLog();
 }
 function needsApproval(r){return offerTotal(r)>0&&(!r.approval||!r.approval.status||r.approval.status==='pending');}
@@ -1307,6 +1309,7 @@ function approveOffer(id,status){
 function filtered(){
   let a=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
   if(ST.approvalFilter)a=a.filter(r=>needsApproval(r));
+  else if(ST.voucherFilter)a=a.filter(r=>r.mavoucher||r.voucher_status);
   else if(ST.stageFilter)a=a.filter(r=>r.stage===ST.stageFilter);
   if(ST.search){const q=ST.search.toLowerCase();a=a.filter(r=>(r.org||'').toLowerCase().includes(q)||(r.event||'').toLowerCase().includes(q)||(r.cat||'').toLowerCase().includes(q)||(r.school||'').toLowerCase().includes(q));}
   // Mặc định: mới nhận lên đầu (sort theo receivedDate desc, fallback theo id desc)
@@ -1319,7 +1322,7 @@ function renderSidebar(){
   const all=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
   const cnt={};STAGES.forEach(st=>{cnt[st.id]=all.filter(r=>r.stage===st.id).length;});
   const pendingCnt=all.filter(r=>needsApproval(r)).length;
-  const tm=trackMeta();const _au=getAuthUser();const navs=[{id:'overview',label:'Tổng quan',ico:'home'},{id:'kanban',label:'Kanban',ico:'kanban'},{id:'list',label:'Danh sách',ico:'list'},{id:'stats',label:'Thống kê',ico:'chart'},{id:'room_schedule',label:'Lịch phòng',ico:'room'}];if(_au&&_au.username==='hueptt')navs.push({id:'log',label:'Nhật ký',ico:'log'});
+  const tm=trackMeta();const _au=getAuthUser();const navs=[{id:'overview',label:'Tổng quan',ico:'home'},{id:'kanban',label:'Kanban',ico:'kanban'},{id:'list',label:'Danh sách',ico:'list'},{id:'voucher_board',label:'Bảng Voucher',ico:'voucher'},{id:'stats',label:'Thống kê',ico:'chart'},{id:'room_schedule',label:'Lịch phòng',ico:'room'}];if(_au&&_au.username==='hueptt')navs.push({id:'log',label:'Nhật ký',ico:'log'});
   document.getElementById('sb').innerHTML=`
     <div class="sb-logo">
       <div class="sb-badge">PNE</div>
@@ -1377,9 +1380,10 @@ function promptGasUrl(){
   else if(url) alert('URL không hợp lệ — cần dạng https://script.google.com/macros/s/…/exec');
 }
 function setTrack(t){ST.track=t;ST.stageFilter=null;ST.approvalFilter=false;ST.selId=null;document.getElementById('rp').classList.remove('open');render();}
-function switchView(v){ST.view=v;ST.stageFilter=null;ST.approvalFilter=false;render();}
-function setStageFilter(id){ST.stageFilter=id;ST.approvalFilter=false;if(id)ST.view='list';render();}
-function setApprovalFilter(){ST.approvalFilter=true;ST.stageFilter=null;ST.view='list';render();}
+function switchView(v){ST.view=v;ST.stageFilter=null;ST.approvalFilter=false;ST.voucherFilter=false;if(v!=='voucher_board')ST.voucherBoardStatus=null;render();}
+function setStageFilter(id){ST.stageFilter=id;ST.approvalFilter=false;ST.voucherFilter=false;if(id)ST.view='list';render();}
+function setApprovalFilter(){ST.approvalFilter=true;ST.stageFilter=null;ST.voucherFilter=false;ST.view='list';render();}
+function setVoucherFilter(){ST.voucherFilter=true;ST.stageFilter=null;ST.approvalFilter=false;ST.view='list';render();}
 function setYear(y){ST.year=y;render();}
 
 // ── ROOM SCHEDULE ──
@@ -1608,6 +1612,7 @@ function renderKanban(){
                 ${ot===0&&(r.stage==='offered'||r.stage==='negotiating')?`<div style="font-size:11px;color:#d97706;margin-top:5px">⚡ Chưa tính offer</div>`:''}
                 ${needsApproval(r)?`<div style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:700;margin-top:5px">⏳ Chờ duyệt</div>`:''}
                 ${r.stage==='signing'?(()=>{const cs={cho_hop_dong:{bg:'#fef3c7',color:'#92400e',icon:'⏳',label:'Chờ hợp đồng'},dang_dien:{bg:'#dbeafe',color:'#1e40af',icon:'✏️',label:'Đang điền TT'},cho_ky:{bg:'#ede9fe',color:'#5b21b6',icon:'📋',label:'Chờ ký'},da_ky:{bg:'#dcfce7',color:'#14532d',icon:'✅',label:'Đã ký xong'}};const c=cs[r.contract_status];return c?`<div style="display:inline-flex;align-items:center;gap:4px;background:${c.bg};color:${c.color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:5px">${c.icon} ${c.label}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;color:#6b7280;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;margin-top:5px">📄 Chưa cập nhật HĐ</div>`;})():''}
+                ${(()=>{const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};const vs=VSTAT_META[r.voucher_status];if(r.mavoucher||r.voucher_status){const dl=r.voucher_print_deadline?(()=>{const d=daysUntil(r.voucher_print_deadline);if(d===null)return'';return d<=0?`<span style="font-size:10px;color:#dc2626;font-weight:700">⚠️ Đã qua deadline</span>`:d<=3?`<span style="font-size:10px;color:#d97706;font-weight:700">⏰ Còn ${d} ngày in</span>`:'';})():'';return`<div style="margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${vs?`<div style="display:inline-flex;align-items:center;gap:4px;background:${vs.bg};color:${vs.c};border:1px solid ${vs.c}33;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${vs.i} ${vs.t}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">🎟️ Có voucher</div>`}${r.voucher_print_qty?`<span style="font-size:10.5px;color:#94a3b8;font-weight:500">×${r.voucher_print_qty}</span>`:''} ${dl}</div>`;}return'';})()}
                 ${r.trackingUrl?`<div style="margin-top:5px"><a href="${r.trackingUrl}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #bfdbfe">📊 Tracking</a></div>`:''}
               </div>`;}).join('')}
           </div>
@@ -1628,8 +1633,9 @@ function renderList(){
   const sentMap=getSentEduMap();
   const tm2=trackMeta();
   let h=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <button class="stg-pill" onclick="setStageFilter(null)" style="${!ST.stageFilter?`border-color:${tm2.color};background:${tm2.bg};color:${tm2.color}`:``}">Tất cả (${_allRecs.length})</button>
-    ${STAGES.map(st=>`<button class="stg-pill" onclick="setStageFilter('${st.id}')" style="${ST.stageFilter===st.id?`border-color:${st.color};background:${st.color}22;color:${st.color}`:``}">${st.label} <span style="opacity:.7">(${_stgCnts[st.id]||0})</span></button>`).join('')}
+    <button class="stg-pill" onclick="setStageFilter(null)" style="${!ST.stageFilter&&!ST.voucherFilter?`border-color:${tm2.color};background:${tm2.bg};color:${tm2.color}`:``}">Tất cả (${_allRecs.length})</button>
+    ${STAGES.map(st=>`<button class="stg-pill" onclick="setStageFilter('${st.id}')" style="${ST.stageFilter===st.id&&!ST.voucherFilter?`border-color:${st.color};background:${st.color}22;color:${st.color}`:``}">${st.label} <span style="opacity:.7">(${_stgCnts[st.id]||0})</span></button>`).join('')}
+    <button class="stg-pill" onclick="setVoucherFilter()" style="${ST.voucherFilter?'border-color:#7c3aed;background:#ede9fe;color:#7c3aed':''}" title="Chỉ hiện hồ sơ có voucher">🎟️ Có voucher <span style="opacity:.7">(${_allRecs.filter(r=>r.mavoucher||r.voucher_status).length})</span></button>
   </div>`;
   // Bulk action bar
   if(nSel>0){
@@ -1682,6 +1688,98 @@ function renderList(){
   h+='</tbody></table>';
   document.getElementById('content').innerHTML=h;
 }
+// ── VOUCHER BOARD ──
+function renderVoucherBoard(){
+  const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};
+  const all=loadAll().filter(r=>r.mavoucher||r.voucher_status||r.voucher_print_qty);
+  // Thống kê nhanh
+  const counts={chua_in:0,chuyen_in:0,da_in:0,da_giao:0,none:0};
+  all.forEach(r=>{const s=r.voucher_status||'none';if(counts[s]!==undefined)counts[s]++;else counts.none++;});
+  const urgentDeadline=all.filter(r=>{if(!r.voucher_print_deadline||r.voucher_status==='da_in'||r.voucher_status==='da_giao')return false;const d=daysUntil(r.voucher_print_deadline);return d!==null&&d<=3;});
+
+  const cur=ST.voucherBoardStatus;
+  let h=`<div style="margin-bottom:16px">
+    <div style="font-size:18px;font-weight:700;color:var(--tx1);margin-bottom:12px">🎟️ Bảng Voucher <span style="font-size:13px;font-weight:400;color:#64748b">(${all.length} hồ sơ có voucher)</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+      ${[
+        {s:'chua_in',  label:'Chưa in',     bg:'#fee2e2',c:'#dc2626',activeBorder:'#dc2626'},
+        {s:'chuyen_in',label:'Chuyển in',   bg:'#fef3c7',c:'#d97706',activeBorder:'#d97706'},
+        {s:'da_in',    label:'Đã in',       bg:'#dcfce7',c:'#16a34a',activeBorder:'#16a34a'},
+        {s:'da_giao',  label:'Đã giao CLB', bg:'#dbeafe',c:'#2563eb',activeBorder:'#2563eb'},
+        {s:'none',     label:'Chưa set',    bg:'#f1f5f9',c:'#64748b',activeBorder:'#64748b'},
+      ].map(x=>{
+        const isActive=cur===x.s;
+        return`<div onclick="ST.voucherBoardStatus=ST.voucherBoardStatus==='${x.s}'?null:'${x.s}';renderVoucherBoard()"
+          style="background:${x.bg};color:${x.c};border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;border:2.5px solid ${isActive?x.activeBorder:'transparent'};box-shadow:${isActive?'0 0 0 2px '+x.activeBorder+'44':''};transition:all .15s;user-select:none" title="Click để lọc">
+          ${VSTAT_META[x.s]?VSTAT_META[x.s].i+' ':''}<span>${x.label}</span>
+          <span style="font-size:20px;font-weight:800;display:block;margin-top:2px">${counts[x.s]||0}</span>
+        </div>`;
+      }).join('')}
+      ${urgentDeadline.length?`<div onclick="ST.voucherBoardStatus=ST.voucherBoardStatus==='urgent'?null:'urgent';renderVoucherBoard()"
+        style="background:#fdf2f8;color:#9d174d;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;border:2.5px solid ${cur==='urgent'?'#9d174d':'transparent'};cursor:pointer;user-select:none" title="Click để lọc">
+        ⏰ Deadline ≤ 3 ngày
+        <span style="font-size:20px;font-weight:800;display:block;margin-top:2px">${urgentDeadline.length}</span>
+      </div>`:''}
+      ${cur?`<button onclick="ST.voucherBoardStatus=null;renderVoucherBoard()" style="align-self:center;background:none;border:1px solid #e2e8f0;border-radius:6px;padding:6px 12px;font-size:12px;color:#64748b;cursor:pointer">✕ Bỏ lọc</button>`:''}
+    </div>`;
+
+  if(!all.length){
+    h+=`<div style="text-align:center;padding:60px;color:#94a3b8;font-size:14px">Chưa có hồ sơ nào có voucher</div>`;
+  } else {
+    // Áp dụng bộ lọc trạng thái nếu có
+    let display=all;
+    if(cur==='none') display=all.filter(r=>!r.voucher_status);
+    else if(cur==='urgent') display=urgentDeadline;
+    else if(cur) display=all.filter(r=>r.voucher_status===cur);
+    // Sort: deadline gần nhất lên đầu, sau đó theo trạng thái
+    const ORDER={chuyen_in:0,chua_in:1,none:2,da_in:3,da_giao:4};
+    const sorted=[...display].sort((a,b)=>{
+      const oa=ORDER[a.voucher_status||'none']??2, ob=ORDER[b.voucher_status||'none']??2;
+      if(oa!==ob)return oa-ob;
+      const da=a.voucher_print_deadline||'9999', db=b.voucher_print_deadline||'9999';
+      return da<db?-1:da>db?1:0;
+    });
+    h+=`<table class="list-table"><thead><tr>
+      <th style="min-width:180px">CLB / Đơn vị</th>
+      <th style="min-width:200px">Chương trình</th>
+      <th>Mã voucher</th>
+      <th style="text-align:center">SL in</th>
+      <th>Deadline in</th>
+      <th>Trạng thái in</th>
+      <th style="text-align:center">Thao tác</th>
+    </tr></thead><tbody>`;
+    sorted.forEach(r=>{
+      const vs=VSTAT_META[r.voucher_status];
+      const dl=r.voucher_print_deadline;
+      const dlDays=dl?daysUntil(dl):null;
+      const dlUrgent=dlDays!==null&&dlDays<=3&&r.voucher_status!=='da_in'&&r.voucher_status!=='da_giao';
+      const vPrefix=(r.mavoucher||'').replace(/\.\d{2}$/,'');
+      const qty=parseInt(r.voucher_print_qty)||0;
+      const codeDisplay=vPrefix&&qty>1
+        ?`<span style="font-family:monospace;font-size:12px">${vPrefix}.01 → ${vPrefix}.${String(qty).padStart(2,'0')}</span>`
+        :r.mavoucher?`<span style="font-family:monospace;font-size:12px">${r.mavoucher}</span>`:'<span style="color:#cbd5e1">—</span>';
+      const dlDisplay=dl
+        ?`<span style="${dlUrgent?'color:#dc2626;font-weight:700':dlDays!==null&&dlDays<=7?'color:#d97706;font-weight:600':'color:#475569'}">${dl.split('-').reverse().join('/')}${dlDays!==null?`<div style="font-size:10px">${dlDays<=0?'⚠️ Quá hạn':'còn '+dlDays+'n'}</div>`:''}</span>`
+        :'<span style="color:#cbd5e1">—</span>';
+
+      h+=`<tr class="data-row${dlUrgent?' '+'':''}" style="${dlUrgent?'background:#fff1f2':''}" onclick="openAddModal('${r.id}')">
+        <td><div style="font-weight:600">${r.org||'—'}</div>${r.year?`<div style="font-size:10px;color:#94a3b8">${r.year}</div>`:''}</td>
+        <td style="color:#475569;font-size:13px">${r.event||'—'}</td>
+        <td>${codeDisplay}</td>
+        <td style="text-align:center;font-weight:600">${qty||'<span style="color:#cbd5e1">—</span>'}</td>
+        <td>${dlDisplay}</td>
+        <td>${vs?`<span style="display:inline-flex;align-items:center;gap:4px;background:${vs.bg};color:${vs.c};border-radius:5px;padding:3px 8px;font-size:12px;font-weight:600">${vs.i} ${vs.t}</span>`:'<span style="color:#94a3b8;font-size:12px">Chưa set</span>'}</td>
+        <td style="text-align:center" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="openAddModal('${r.id}')" style="font-size:12px;padding:4px 10px">📋 Mở hồ sơ</button>
+        </td>
+      </tr>`;
+    });
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+  document.getElementById('content').innerHTML=h;
+}
+
 function toggleSelectAll(checked){const sp=filtered();sp.forEach(r=>{if(checked)ST.selectedIds.add(r.id);else ST.selectedIds.delete(r.id);});renderList();}
 function toggleSelectOne(id,checked){if(checked)ST.selectedIds.add(id);else ST.selectedIds.delete(id);renderList();}
 function clearSelection(){ST.selectedIds.clear();renderList();}
