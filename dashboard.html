@@ -1285,7 +1285,7 @@ function render(){
   else if(ST.view==='voucher_board')renderVoucherBoard();
   else if(ST.view==='log')renderLog();
 }
-function needsApproval(r){return offerTotal(r)>0&&(!r.approval||!r.approval.status||r.approval.status==='pending');}
+function needsApproval(r){return r.stage!=='executing'&&r.stage!=='done'&&offerTotal(r)>0&&(!r.approval||!r.approval.status||r.approval.status==='pending');}
 function approveOffer(id,status){
   const noteEl=document.getElementById('rp_appr_note_'+id);
   const note=noteEl?noteEl.value.trim():'';
