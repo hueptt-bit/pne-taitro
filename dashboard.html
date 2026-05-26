@@ -3399,9 +3399,9 @@ function switchModalTab(tab){
     const _offerFallback=(r&&r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);
     const negSrc=(_negDraft&&_negDraft.items&&_negDraft.items.length)?_negDraft.items:((r&&r.neg_items&&r.neg_items.length)?r.neg_items:_offerFallback);
     renderVoucherBreakdown(negSrc);
-    // Auto-fill qty nếu chưa có
+    // Auto-fill qty từ gói đàm phán (luôn override)
     const qtyEl=document.getElementById('f_voucher_print_qty');
-    if(qtyEl&&!qtyEl.value){
+    if(qtyEl){
       const autoQty=negSrc.filter(i=>!i.isCash).reduce((s,i)=>s+(+i.qty||0),0);
       if(autoQty>0)qtyEl.value=autoQty;
     }
@@ -3468,8 +3468,8 @@ function openAddModal(id){
       document.getElementById('f_hopdong').value=r.hopdong||'';document.getElementById('f_mavoucher').value=r.mavoucher||'';
       // Auto-fill hạn voucher từ deadlineDate nếu chưa có
       document.getElementById('f_hanvoucher').value=r.hanvoucher||((!r.hanvoucher&&r.deadlineDate)?r.deadlineDate:'');
-      // Auto-fill số lượng từ neg_items (hoặc offer.items nếu neg_items chưa lưu)
-      {const savedQty=r.voucher_print_qty;const _ns=(r.neg_items&&r.neg_items.length)?r.neg_items:(r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);const autoQty=_ns.reduce((s,i)=>s+(+i.qty||0),0);document.getElementById('f_voucher_print_qty').value=savedQty||(autoQty>0?autoQty:'');}
+      // Auto-fill số lượng từ neg_items (hoặc offer.items nếu neg_items chưa lưu) — ưu tiên tính từ gói
+      {const savedQty=r.voucher_print_qty;const _ns=(r.neg_items&&r.neg_items.length)?r.neg_items:(r.offer&&r.offer.items?r.offer.items.filter(i=>!i.isCash&&(+i.qty||0)>0).map(i=>({label:i.type,qty:+i.qty||0,maxVal:+i.maxVal||0,isCash:false})):[]);const autoQty=_ns.reduce((s,i)=>s+(+i.qty||0),0);document.getElementById('f_voucher_print_qty').value=autoQty>0?autoQty:(savedQty||'');}
       // Mặc định trạng thái 'chua_in' nếu đã có mã voucher nhưng chưa chọn status
       {const vstat=r.voucher_status||(r.mavoucher?'chua_in':'');document.getElementById('f_voucher_status').value=vstat;document.getElementById('f_voucher_print_deadline').value=r.voucher_print_deadline||'';onVoucherStatusChange(vstat);}
       // Render breakdown từ neg_items hoặc offer.items
