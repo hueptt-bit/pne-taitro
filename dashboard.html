@@ -1359,7 +1359,11 @@ function renderSidebar(){
     <div class="sb-bottom">
       <div class="sb-section" style="padding:0 4px 6px;font-size:10px">Năm</div>
       <div class="sb-yr-row">${YEARS.map(y=>`<div class="sb-yr-btn${ST.year===y?` active-${tm.cls}`:''}" onclick="setYear('${y}')">${y}</div>`).join('')}</div>
-      <div style="margin-top:8px">
+      <div style="margin-top:8px;display:flex;gap:5px">
+        <button onclick="exportLocalBackup()" style="flex:1;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 6px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#c9d1d9'" onmouseout="this.style.color='#6e7f8d'" title="Xuất toàn bộ dữ liệu local ra file JSON"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Xuất backup</button>
+        <button onclick="importLocalBackup()" style="flex:1;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 6px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#c9d1d9'" onmouseout="this.style.color='#6e7f8d'" title="Nhập backup JSON vào domain này"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Nhập backup</button>
+      </div>
+      <div style="margin-top:5px">
         ${GAS_URL
           ? `<button onclick="syncFromGAS()" style="width:100%;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#c9d1d9'" onmouseout="this.style.color='#6e7f8d'" title="Đồng bộ dữ liệu từ GAS"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Sync GAS</button><button onclick="forceSyncFromGAS()" style="width:100%;margin-top:5px;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:.15s" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#6e7f8d'" title="Xoá cache local và tải lại toàn bộ từ GAS (dùng khi data bị lệch)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Reset & Sync</button>`
           : `<button onclick="promptGasUrl()" style="width:100%;background:var(--sb2);color:#6e7f8d;border:1px solid var(--sb3);border-radius:7px;padding:7px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit" title="Cài đặt GAS URL"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>Cài GAS URL</button>`
@@ -4576,6 +4580,33 @@ function doLogin(){
   } else {
     errEl.textContent = 'Sai tên đăng nhập hoặc mật khẩu';
   }
+}
+function exportLocalBackup(){
+  const backup={};
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);backup[k]=localStorage.getItem(k);}
+  const blob=new Blob([JSON.stringify(backup)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='pne_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(a.href);
+  showToast('✅ Đã xuất backup ('+Object.keys(backup).length+' keys)','success',3000);
+}
+function importLocalBackup(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const backup=JSON.parse(ev.target.result);
+        const keys=Object.keys(backup);
+        keys.forEach(k=>localStorage.setItem(k,backup[k]));
+        showToast('✅ Đã nhập '+keys.length+' keys — đang tải lại...','success',2000);
+        setTimeout(()=>location.reload(),2000);
+      }catch(err){showToast('❌ File không hợp lệ','error',3000);}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 function doLogout(){
   if(!confirm('Đăng xuất khỏi dashboard?')) return;
