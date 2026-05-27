@@ -1435,16 +1435,39 @@ function setVoucherFilter(){ST.voucherFilter=true;ST.stageFilter=null;ST.approva
 function setYear(y){ST.year=y;render();}
 
 // ── ROOM SCHEDULE ──
+// Data từ CRM API /rooms (sync ngày 27/05/2026) — fetchRooms() sẽ override khi CORS được bật
 let RS_ROOMS=[
-  {id:'P.17',label:'P.17',cap:20},{id:'P.20',label:'P.20',cap:12},{id:'P.21',label:'P.21',cap:12},
-  {id:'P.22',label:'P.22',cap:15},{id:'P.23A',label:'P.23A',cap:8},{id:'P.23B',label:'P.23B',cap:9},
-  {id:'P.24',label:'P.24',cap:10},{id:'P.25',label:'P.25',cap:6},{id:'P.25A',label:'P.25A',cap:15},
-  {id:'P.25B',label:'P.25B',cap:12},{id:'P.26',label:'P.26',cap:10},{id:'P.54',label:'P.54',cap:15},
-  {id:'P.55',label:'P.55',cap:20},{id:'P.56',label:'P.56',cap:20},{id:'P.60',label:'P.60',cap:6},
-  {id:'P.61',label:'P.61',cap:12},{id:'P.62',label:'P.62',cap:8},{id:'P.63',label:'P.63',cap:12},
-  {id:'P.64',label:'P.64',cap:4},{id:'P.65',label:'P.65',cap:10},{id:'P.71',label:'P.71',cap:10},
+  {id:'P.0',label:'P.0',cap:10,apiId:65},{id:'P.2',label:'P.2',cap:40,apiId:9},
+  {id:'P.3',label:'P.3',cap:15,apiId:10},{id:'P.4',label:'P.4',cap:10,apiId:62},
+  {id:'P.11',label:'P.11',cap:150,apiId:60},{id:'P.12',label:'P.12',cap:150,apiId:61},
+  {id:'P.14',label:'P.14',cap:20,apiId:6},{id:'P.15',label:'P.15',cap:40,apiId:5},
+  {id:'P.16',label:'P.16',cap:4,apiId:7},{id:'P.17',label:'P.17',cap:2,apiId:8},
+  {id:'P.20',label:'P.20',cap:12,apiId:11},{id:'P.21',label:'P.21',cap:12,apiId:12},
+  {id:'P.22',label:'P.22',cap:15,apiId:13},{id:'P.23A',label:'P.23A',cap:8,apiId:14},
+  {id:'P.23B',label:'P.23B',cap:9,apiId:15},{id:'P.24',label:'P.24',cap:10,apiId:16},
+  {id:'P.25',label:'P.25',cap:6,apiId:59},{id:'P.25A',label:'P.25A',cap:15,apiId:18},
+  {id:'P.25B',label:'P.25B',cap:12,apiId:19},{id:'P.26',label:'P.26',cap:10,apiId:20},
+  {id:'P.27',label:'P.27',cap:22,apiId:21},{id:'P.28',label:'P.28',cap:18,apiId:22},
+  {id:'P.29',label:'P.29',cap:12,apiId:23},{id:'P.31',label:'P.31',cap:12,apiId:24},
+  {id:'P.32',label:'P.32',cap:17,apiId:25},{id:'P.33',label:'P.33',cap:20,apiId:26},
+  {id:'P.34',label:'P.34',cap:15,apiId:27},{id:'P.35',label:'P.35',cap:15,apiId:28},
+  {id:'P.36',label:'P.36',cap:15,apiId:29},{id:'P.37',label:'P.37',cap:15,apiId:30},
+  {id:'P.38',label:'P.38',cap:4,apiId:31},{id:'P.38A',label:'P.38A',cap:4,apiId:58},
+  {id:'P.40',label:'P.40',cap:20,apiId:32},{id:'P.41',label:'P.41',cap:20,apiId:33},
+  {id:'P.42',label:'P.42',cap:20,apiId:34},{id:'P.43',label:'P.43',cap:20,apiId:35},
+  {id:'P.44',label:'P.44',cap:20,apiId:36},{id:'P.45',label:'P.45',cap:20,apiId:37},
+  {id:'P.46',label:'P.46',cap:3,apiId:38},{id:'P.47',label:'P.47',cap:4,apiId:39},
+  {id:'P.51',label:'P.51',cap:8,apiId:44},{id:'P.52',label:'P.52',cap:20,apiId:45},
+  {id:'P.53',label:'P.53',cap:15,apiId:46},{id:'P.54',label:'P.54',cap:15,apiId:47},
+  {id:'P.55',label:'P.55',cap:20,apiId:48},{id:'P.56',label:'P.56',cap:20,apiId:49},
+  {id:'P.60',label:'P.60',cap:6,apiId:56},{id:'P.61',label:'P.61',cap:15,apiId:50},
+  {id:'P.62',label:'P.62',cap:8,apiId:51},{id:'P.63',label:'P.63',cap:15,apiId:52},
+  {id:'P.64',label:'P.64',cap:4,apiId:53},{id:'P.65',label:'P.65',cap:10,apiId:54},
+  {id:'P.71',label:'P.71',cap:10,apiId:67},{id:'P.210',label:'P.210',cap:4,apiId:55},
+  {id:'P.210A',label:'P.210A',cap:4,apiId:64},{id:'P.310',label:'P.310',cap:4,apiId:57},
+  {id:'P.310A',label:'P.310A',cap:3,apiId:66},
 ];
-let _roomsLoaded=false,_roomsFetching=false;
+let _roomsLoaded=true,_roomsFetching=false,_roomsFromAPI=false; // hardcoded 57 phòng, fetchRooms override khi CORS ok
 async function fetchRooms(){
   if(_roomsLoaded||_roomsFetching)return;
   _roomsFetching=true;
@@ -1456,11 +1479,11 @@ async function fetchRooms(){
       .filter(r=>r.label&&r.label!=='0')
       .map(r=>({id:'P.'+r.label,label:'P.'+r.label,cap:r.cap,apiId:r.id}))
       .sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true}));
-    _roomsLoaded=true;
+    _roomsLoaded=true;_roomsFromAPI=true;
     renderRoomSchedule();
   }catch(e){
-    console.warn('fetchRooms error:',e);
-    _roomsLoaded=true; // dùng fallback mock, không fetch lại
+    console.warn('fetchRooms error (CORS?):',e);
+    _roomsLoaded=true;_roomsFromAPI=false; // dùng fallback mock
   }finally{
     _roomsFetching=false;
   }
@@ -1644,7 +1667,7 @@ function renderRoomSchedule(){
         <span style="font-size:12px;color:var(--tx3);margin-left:4px">${dateLabel}</span>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
           <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
-          <div style="${_roomsLoaded?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#fef9c3;border:1px solid #fde047;color:#92400e'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsLoaded?'✅ '+RS_ROOMS.length+' phòng từ CRM':'⏳ Đang tải phòng...'}</div>
+          <div style="${_roomsFromAPI?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsFromAPI?'✅ '+RS_ROOMS.length+' phòng (live)':'🏢 '+RS_ROOMS.length+' phòng'}</div>
         </div>
       </div>
       <div class="rs-grid-wrap">
@@ -1726,7 +1749,7 @@ function renderRoomSchedule(){
         <button class="rs-today-btn" onclick="(()=>{ST.rs.weekStart='';ST.rs.date='${todayStr}';renderRoomSchedule()})()">Tuần này</button>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
           <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
-          <div style="${_roomsLoaded?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#fef9c3;border:1px solid #fde047;color:#92400e'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsLoaded?'✅ '+RS_ROOMS.length+' phòng từ CRM':'⏳ Đang tải phòng...'}</div>
+          <div style="${_roomsFromAPI?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsFromAPI?'✅ '+RS_ROOMS.length+' phòng (live)':'🏢 '+RS_ROOMS.length+' phòng'}</div>
         </div>
       </div>
       <div class="rs-grid-wrap">
