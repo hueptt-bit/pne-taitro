@@ -1086,7 +1086,20 @@ let _venueScheduleDraft=[]; // [{id,date,ca,muc_dich,suc_chua,phong,gia,confirme
 let _expandedPkgBenefits=new Set(); // track gói nào đang mở rộng danh sách quyền lợi
 
 // ══ DATA ══
-function loadAll(){try{return JSON.parse(localStorage.getItem(KEY_S)||'[]');}catch(e){return[];}}
+function loadAll(){
+  try{
+    const records=JSON.parse(localStorage.getItem(KEY_S)||'[]');
+    // Sanitize: đảm bảo các field mảng luôn là array (không phải string JSON)
+    const ARR_FIELDS=['benefits','neg_items','neg_benefits','roomSponsorships','clbPackages'];
+    return records.map(r=>{
+      ARR_FIELDS.forEach(f=>{
+        if(typeof r[f]==='string'){try{r[f]=JSON.parse(r[f]);}catch(e){r[f]=[];}}
+        if(!Array.isArray(r[f]))r[f]=[];
+      });
+      return r;
+    });
+  }catch(e){return[];}
+}
 function saveAll(a, opts={}){
   localStorage.setItem(KEY_S,JSON.stringify(a));
   if(!opts.noPush) pushToGAS(a); // đồng bộ lên GAS sau mỗi lần lưu
