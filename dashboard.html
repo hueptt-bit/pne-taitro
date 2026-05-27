@@ -3841,9 +3841,10 @@ function saveRecord(){
         event:nr.event,
         school:nr.school||'',
         mavoucher:nr.mavoucher||'',
+        hanvoucher:nr.hanvoucher||'',
         voucher_print_qty:nr.voucher_print_qty||'',
         voucher_print_deadline:voucherPrintDeadlineSave||nr.voucher_print_deadline||'',
-        neg_items:(nr.neg_items||[]).filter(i=>!i.isCash)
+        neg_items:(nr.neg_items||[]).filter(i=>!i.isCash).map(i=>({...i,type:i.type||i.label||''}))
       })}).then(r=>r.json()).then(d=>{
         if(d&&d.ok)showToast('📤 Đã gửi thông báo Telegram in voucher!','success',3500);
         else showToast('⚠️ Lưu OK nhưng Telegram lỗi: '+(d&&d.error||'unknown'),'warn',4000);
