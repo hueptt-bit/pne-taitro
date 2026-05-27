@@ -24,6 +24,7 @@
   --sb:#07051A;--sb2:#0D0B26;--sb3:#1C183D;--sb4:#2a2550;
   --v:#5b5bd6;--v2:#4f46e5;--v3:#ede9fe;--v4:#ddd6fe;
   --t:#0284c7;--t2:#0891b2;--t3:#e0f2fe;--t4:#bae6fd;
+  --venue:#059669;--venue2:#047857;--venue3:#d1fae5;--venue4:#a7f3d0;
   --bg:#f1f3f7;--card:#fff;--border:#e5e7eb;--border2:#d1d5db;
   --tx:#111827;--tx2:#4b5563;--tx3:#9ca3af;--tx4:#d1d5db;
   --red:#dc2626;--redbg:#fef2f2;
@@ -50,17 +51,20 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
 .sb-logo-title{color:#f0f6fc;font-weight:700;font-size:13.5px;letter-spacing:-.02em;line-height:1.2}
 .sb-logo-sub2{color:rgba(165,180,252,.6);font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
 .sb-logo-sub{color:#4d5a6a;font-size:11px;margin-top:1px}
-.track-sw{margin:10px 10px 4px;display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(255,255,255,.04);padding:6px;border-radius:12px;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
-.track-btn{padding:10px 8px;text-align:center;border-radius:8px;cursor:pointer;transition:.2s;line-height:1;display:flex;flex-direction:column;align-items:center;gap:0}
+.track-sw{margin:10px 10px 4px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;background:rgba(255,255,255,.04);padding:4px;border-radius:10px;flex-shrink:0;border:1px solid rgba(255,255,255,.08)}
+.track-btn{padding:8px 4px;text-align:center;border-radius:7px;cursor:pointer;transition:.2s;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:48px}
 .track-btn:hover{background:rgba(255,255,255,.07)}
 .tb-logo{height:34px;max-width:90px;object-fit:contain;filter:none;opacity:.75;transition:.2s}
 .track-btn-label{display:none}
-.track-btn-text{font-size:13px;font-weight:700;letter-spacing:.02em;color:rgba(255,255,255,.55);transition:.2s;line-height:1}
-.track-btn.active-v .track-btn-text,.track-btn.active-t .track-btn-text{color:#fff}
-.track-btn.active-v{background:linear-gradient(135deg,#5b5bd6,#4f46e5);box-shadow:0 2px 10px rgba(91,91,214,.5)}
-.track-btn.active-t{background:linear-gradient(135deg,#0284c7,#0891b2);box-shadow:0 2px 10px rgba(8,145,178,.5)}
-.track-btn.active-v .tb-logo,.track-btn.active-t .tb-logo{opacity:1;filter:drop-shadow(0 2px 6px rgba(255,255,255,.25))}
-.track-btn.active-v .track-btn-label,.track-btn.active-t .track-btn-label{color:rgba(255,255,255,.88)}
+.track-btn-icon{font-size:15px;line-height:1;opacity:.6;transition:.2s}
+.track-btn-text{font-size:10px;font-weight:700;letter-spacing:.02em;color:rgba(255,255,255,.5);transition:.2s;line-height:1;white-space:nowrap}
+.track-btn.active-v .track-btn-text,.track-btn.active-t .track-btn-text,.track-btn.active-venue .track-btn-text{color:#fff}
+.track-btn.active-v .track-btn-icon,.track-btn.active-t .track-btn-icon,.track-btn.active-venue .track-btn-icon{opacity:1}
+.track-btn.active-v{background:linear-gradient(135deg,#5b5bd6,#4f46e5);box-shadow:0 2px 8px rgba(91,91,214,.4)}
+.track-btn.active-t{background:linear-gradient(135deg,#0284c7,#0891b2);box-shadow:0 2px 8px rgba(8,145,178,.4)}
+.track-btn.active-venue{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 2px 8px rgba(5,150,105,.4)}
+.track-btn.active-v .tb-logo,.track-btn.active-t .tb-logo,.track-btn.active-venue .tb-logo{opacity:1;filter:drop-shadow(0 2px 6px rgba(255,255,255,.25))}
+.track-btn.active-v .track-btn-label,.track-btn.active-t .track-btn-label,.track-btn.active-venue .track-btn-label{color:rgba(255,255,255,.88)}
 .sb-section{padding:14px 16px 5px;font-size:10px;font-weight:700;color:#3d4a5c;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
 .sb-nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;color:#6e7f8d;cursor:pointer;transition:.15s;font-size:13px;font-weight:500;margin:0 8px 1px;flex-shrink:0}
 .sb-nav-item:hover{background:var(--sb2);color:#c9d1d9}
@@ -104,6 +108,8 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
 .btn-acc.v:hover{background:linear-gradient(135deg,#4f46e5,#4338ca);box-shadow:0 2px 6px rgba(91,91,214,.4)}
 .btn-acc.t{background:linear-gradient(135deg,#0284c7,#0891b2);box-shadow:0 1px 3px rgba(2,132,199,.3)}
 .btn-acc.t:hover{background:linear-gradient(135deg,#0891b2,#0e7490);box-shadow:0 2px 6px rgba(2,132,199,.4)}
+.btn-acc.venue{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 1px 3px rgba(5,150,105,.3)}
+.btn-acc.venue:hover{background:linear-gradient(135deg,#047857,#065f46);box-shadow:0 2px 6px rgba(5,150,105,.4)}
 .btn-ghost{background:transparent;color:var(--tx2);border:1px solid var(--border)}
 .btn-ghost:hover{background:var(--bg1);border-color:var(--border2)}
 .btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
@@ -416,6 +422,7 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
             <select id="f_track" onchange="updateModalForTrack()">
               <option value="voucher">🎓 Voucher PNE</option>
               <option value="test">📝 Test Online</option>
+              <option value="venue">🏢 Tài trợ địa điểm</option>
             </select>
           </div>
           <div class="form-row"><label>Giai đoạn</label><select id="f_stage"></select></div>
@@ -779,6 +786,15 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           </div>
           <div class="rp-divider" style="margin:14px 0"></div>
         </div>
+        <!-- Venue (Tài trợ địa điểm) section — chỉ hiện cho track venue -->
+        <div id="offer_venue_section" style="display:none">
+          <div style="background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+            <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:10px">🏢 Tài trợ địa điểm — Đề xuất phòng</div>
+            <div id="venue_schedule_list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px"></div>
+            <button onclick="addVenueSchedule()" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px;border-style:dashed;border-color:#059669;color:#059669">+ Thêm lịch</button>
+          </div>
+          <div class="rp-divider" style="margin:14px 0"></div>
+        </div>
         <!-- Test Online platform section (chỉ hiện cho track Test Online) -->
         <div id="offer_test_section" style="display:none">
           <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--tx1)">🖥️ Nền tảng cung cấp</div>
@@ -934,9 +950,25 @@ const VOUCHER_TEST=[
 
 const PNE_LOGO='data:image/png;base64,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';
 const TOL_LOGO='data:image/png;base64,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';
+const VENUE_PRICING=[
+  {cap:4,   per_buoi:300000,  per_2buoi:600000,  per_ngay:900000},
+  {cap:12,  per_buoi:450000,  per_2buoi:900000,  per_ngay:1350000},
+  {cap:20,  per_buoi:750000,  per_2buoi:1500000, per_ngay:2250000},
+  {cap:30,  per_buoi:1100000, per_2buoi:2200000, per_ngay:3300000},
+  {cap:45,  per_buoi:1500000, per_2buoi:3000000, per_ngay:4500000},
+  {cap:70,  per_buoi:2000000, per_2buoi:4000000, per_ngay:6000000},
+  {cap:110, per_buoi:2900000, per_2buoi:5800000, per_ngay:8700000},
+];
+function venuePrice(suc_chua, ca){
+  const tier=VENUE_PRICING.find(p=>p.cap>=suc_chua)||VENUE_PRICING[VENUE_PRICING.length-1];
+  if(ca==='ca_ngay')return tier.per_ngay;
+  if(ca==='2_buoi')return tier.per_2buoi;
+  return tier.per_buoi;
+}
 const TRACK_META={
   voucher:{label:'Voucher PNE', logo:PNE_LOGO, color:'#4f46e5', bg:'#eef2ff', cls:'v', vouchers:VOUCHER_PNE},
   test:   {label:'Test Online',  logo:TOL_LOGO, color:'#0891b2', bg:'#ecfeff', cls:'t', vouchers:VOUCHER_TEST},
+  venue:  {label:'Tài trợ địa điểm', logo:'', color:'#059669', bg:'#ecfdf5', cls:'venue', vouchers:VOUCHER_PNE},
 };
 
 const KEY_S='pne_v4';
@@ -994,7 +1026,7 @@ async function syncFromGAS(silent=false){
       if(gasDeleted.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDeleted]));
       let newCount=0, updatedCount=0;
       // Các field lớn GAS có thể không lưu được (Sheets cell limit) → giữ local nếu GAS rỗng
-      const LOCAL_ONLY_FIELDS=['proposalText','clbPackages','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
+      const LOCAL_ONLY_FIELDS=['proposalText','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
       data.records.forEach(gasRec=>{
         if(allDeleted.has(gasRec.id)) return;
         const localRec=localMap.get(gasRec.id);
@@ -1050,6 +1082,7 @@ let _negPkgIdx=0;      // index gói CLB đang deal (voucher track)
 let _negTestPkgIdx=null; // index gói Test Online đang chọn
 let _roomDraft=[]; // [{id,date,purpose,rooms:[{id,capacity}]}] — room sponsorship bookings
 let _mapsReviewDraft={qty:0,perMap:[0,0,0]}; // Google Maps review deal — perMap indexed by MAPS_REVIEW_TARGETS
+let _venueScheduleDraft=[]; // [{id,date,ca,muc_dich,suc_chua,phong,gia,confirmed}] — venue sponsorship schedules
 let _expandedPkgBenefits=new Set(); // track gói nào đang mở rộng danh sách quyền lợi
 
 // ══ DATA ══
@@ -1259,7 +1292,14 @@ function stageMeta(id){return STAGES.find(s=>s.id===id)||STAGES[0];}
 function benefitProgress(r){if(!r.benefits||!r.benefits.length)return{done:0,total:0,pct:0};const d=r.benefits.filter(b=>b.done).length;return{done:d,total:r.benefits.length,pct:Math.round(d/r.benefits.length*100)};}
 function daysUntil(ds){if(!ds)return null;const d=new Date(ds),t=new Date();t.setHours(0,0,0,0);d.setHours(0,0,0,0);return Math.round((d-t)/864e5);}
 function fmtDate(ds){if(!ds)return null;const iso=String(ds).match(/(\d{4})-(\d{2})-(\d{2})/);if(iso)return`${iso[3]}/${iso[2]}/${iso[1]}`;try{const d=new Date(ds);if(!isNaN(d))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}catch{}return ds;}
-function offerTotal(r){if(!r.offer||!r.offer.items)return 0;return r.offer.items.reduce((s,i)=>s+(i.isCash?+i.cashVal||0:(+i.qty||0)*(+i.maxVal||0)),0);}
+function offerTotal(r){
+  if(r.track==='venue'){
+    if(!r.venue_schedules||!r.venue_schedules.length)return 0;
+    return r.venue_schedules.reduce((s,vs)=>s+(+vs.gia||0),0);
+  }
+  if(!r.offer||!r.offer.items)return 0;
+  return r.offer.items.reduce((s,i)=>s+(i.isCash?+i.cashVal||0:(+i.qty||0)*(+i.maxVal||0)),0);
+}
 function trackMeta(){return TRACK_META[ST.track];}
 function acc(){return trackMeta().color;}
 
@@ -1334,8 +1374,9 @@ function renderSidebar(){
       </div>
     </div>
     <div class="track-sw">
-      <div class="track-btn${ST.track==='voucher'?' active-v':''}" onclick="setTrack('voucher')"><span class="track-btn-text">PNE</span></div>
-      <div class="track-btn${ST.track==='test'?' active-t':''}" onclick="setTrack('test')"><span class="track-btn-text">Test Online</span></div>
+      <div class="track-btn${ST.track==='voucher'?' active-v':''}" onclick="setTrack('voucher')"><span class="track-btn-icon">🎟️</span><span class="track-btn-text">PNE</span></div>
+      <div class="track-btn${ST.track==='test'?' active-t':''}" onclick="setTrack('test')"><span class="track-btn-icon">💻</span><span class="track-btn-text" style="font-size:9px">Test Online</span></div>
+      <div class="track-btn${ST.track==='venue'?' active-venue':''}" onclick="setTrack('venue')"><span class="track-btn-icon">🏢</span><span class="track-btn-text">Địa điểm</span></div>
     </div>
     <div class="sb-section">Xem</div>
     ${navs.map(n=>`<div class="sb-nav-item${ST.view===n.id?` active active-${tm.cls}`:''}" onclick="switchView('${n.id}')">${ICO[n.ico]}<span>${n.label}</span></div>`).join('')}
@@ -1404,7 +1445,8 @@ const RS_ROOMS=[
   {id:'P.64',label:'P.64',cap:4},{id:'P.65',label:'P.65',cap:10},{id:'P.71',label:'P.71',cap:10},
 ];
 // Màu theo loại lớp
-function rsBlockColor(code){
+function rsBlockColor(code, type){
+  if(type==='venue')return{bg:'#059669',fg:'#fff'};
   if(!code)return{bg:'#9ca3af',fg:'#fff'};
   if(code.startsWith('Cho thuê'))return{bg:'#9ca3af',fg:'#fff'};
   const c=code.toUpperCase();
@@ -1447,6 +1489,7 @@ function rsMockSessions(dateStr){
 }
 function rsMockWeekSessions(roomId,weekStart){
   const sessions={};
+  const _venueBlocks=JSON.parse(localStorage.getItem('pne_venue_blocks')||'[]');
   for(let i=0;i<7;i++){
     const d=new Date(weekStart+'T00:00:00');d.setDate(d.getDate()+i);
     const ds=d.toISOString().slice(0,10);
@@ -1454,6 +1497,8 @@ function rsMockWeekSessions(roomId,weekStart){
     // Thêm Cho thuê: PNE theo room
     if(roomId==='P.22'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:15});
     if(roomId==='P.14'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:20});
+    // Thêm venue blocks
+    _venueBlocks.filter(b=>b.date===ds&&b.room===roomId).forEach(vb=>{if(!all.find(s=>s._vsId===vb._vsId))all.push(vb);});
     sessions[ds]=all;
   }
   return sessions;
@@ -1533,6 +1578,9 @@ function renderRoomSchedule(){
     const dateStr=ST.rs.date;
     const d=new Date(dateStr+'T00:00:00');
     const sessions=rsMockSessions(dateStr);
+    // Merge venue blocks from localStorage
+    const _venueBlocks=JSON.parse(localStorage.getItem('pne_venue_blocks')||'[]');
+    _venueBlocks.filter(b=>b.date===dateStr).forEach(vb=>{if(!sessions.find(s=>s._vsId===vb._vsId))sessions.push(vb);});
     const dateLabel=d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
 
     // Tính HV/cap mỗi phòng
@@ -1551,10 +1599,10 @@ function renderRoomSchedule(){
       const startM=rsTimeToMin(s.start),endM=rsTimeToMin(s.end);
       const top=(startM-RS_START)/RS_SLOT*RS_ROW_H;
       const height=Math.max((endM-startM)/RS_SLOT*RS_ROW_H,RS_ROW_H);
-      const {bg,fg}=rsBlockColor(s.code);
+      const {bg,fg}=rsBlockColor(s.code,s.type);
       const isCho=s.code.startsWith('Cho thuê');
       return`<div class="rs-block" style="top:${top}px;height:${height}px;background:${bg};color:${fg}">
-        <div class="rs-block-code">${s.code}</div>
+        <div class="rs-block-code">${s.type==='venue'?'🏢 '+s.code:s.code}</div>
         ${s.teacher&&!isCho?`<div class="rs-block-teacher">${s.teacher}</div>`:''}
         <div class="rs-block-time">${s.start} – ${s.end}</div>
         ${s.hv&&!isCho?`<div class="rs-block-hv">${s.hv} HV</div>`:''}
@@ -1572,7 +1620,10 @@ function renderRoomSchedule(){
         </div>
         <button class="rs-today-btn" onclick="ST.rs.date='${todayStr}';renderRoomSchedule()">Hôm nay</button>
         <span style="font-size:12px;color:var(--tx3);margin-left:4px">${dateLabel}</span>
-        <div style="margin-left:auto;background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+          <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
+          <div style="background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+        </div>
       </div>
       <div class="rs-grid-wrap">
         <div class="rs-grid">
@@ -1626,10 +1677,10 @@ function renderRoomSchedule(){
       const startM=rsTimeToMin(s.start),endM=rsTimeToMin(s.end);
       const top=(startM-RS_START)/RS_SLOT*RS_ROW_H;
       const height=Math.max((endM-startM)/RS_SLOT*RS_ROW_H,RS_ROW_H);
-      const {bg,fg}=rsBlockColor(s.code);
+      const {bg,fg}=rsBlockColor(s.code,s.type);
       const isCho=s.code.startsWith('Cho thuê');
       return`<div class="rs-block" style="top:${top}px;height:${height}px;background:${bg};color:${fg}">
-        <div class="rs-block-code">${s.code}</div>
+        <div class="rs-block-code">${s.type==='venue'?'🏢 '+s.code:s.code}</div>
         ${s.teacher&&!isCho?`<div class="rs-block-teacher">${s.teacher}</div>`:''}
         <div class="rs-block-time">${s.start} – ${s.end}</div>
         ${s.hv&&!isCho?`<div class="rs-block-hv">${s.hv} HV</div>`:''}
@@ -1651,7 +1702,10 @@ function renderRoomSchedule(){
           <button onclick="rsNavWeek(1)">›</button>
         </div>
         <button class="rs-today-btn" onclick="(()=>{ST.rs.weekStart='';ST.rs.date='${todayStr}';renderRoomSchedule()})()">Tuần này</button>
-        <div style="margin-left:auto;background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+          <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
+          <div style="background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+        </div>
       </div>
       <div class="rs-grid-wrap">
         <div class="rs-grid">
@@ -1811,6 +1865,14 @@ function renderKanban(){
                 ${r.stage==='signing'?(()=>{const cs={cho_hop_dong:{bg:'#fef3c7',color:'#92400e',icon:'⏳',label:'Chờ hợp đồng'},dang_dien:{bg:'#dbeafe',color:'#1e40af',icon:'✏️',label:'Đang điền TT'},cho_ky:{bg:'#ede9fe',color:'#5b21b6',icon:'📋',label:'Chờ ký'},da_ky:{bg:'#dcfce7',color:'#14532d',icon:'✅',label:'Đã ký xong'}};const c=cs[r.contract_status];return c?`<div style="display:inline-flex;align-items:center;gap:4px;background:${c.bg};color:${c.color};border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:5px">${c.icon} ${c.label}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f3f4f6;color:#6b7280;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;margin-top:5px">📄 Chưa cập nhật HĐ</div>`;})():''}
                 ${(()=>{const VSTAT_META={chua_in:{t:'Chưa in',c:'#dc2626',bg:'#fee2e2',i:'🖨️'},chuyen_in:{t:'Chuyển in',c:'#d97706',bg:'#fef3c7',i:'📤'},da_in:{t:'Đã in',c:'#16a34a',bg:'#dcfce7',i:'✅'},da_giao:{t:'Đã giao',c:'#2563eb',bg:'#dbeafe',i:'📦'}};const vs=VSTAT_META[r.voucher_status||(r.mavoucher&&r.stage==='executing'?'da_in':r.mavoucher?'chua_in':'')];if(r.mavoucher||r.voucher_status){const dl=r.voucher_print_deadline?(()=>{const d=daysUntil(r.voucher_print_deadline);if(d===null)return'';return d<=0?`<span style="font-size:10px;color:#dc2626;font-weight:700">⚠️ Đã qua deadline</span>`:d<=3?`<span style="font-size:10px;color:#d97706;font-weight:700">⏰ Còn ${d} ngày in</span>`:'';})():'';return`<div style="margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">${vs?`<div style="display:inline-flex;align-items:center;gap:4px;background:${vs.bg};color:${vs.c};border:1px solid ${vs.c}33;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700">${vs.i} ${vs.t}</div>`:`<div style="display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">🎟️ Có voucher</div>`}${r.voucher_print_qty?`<span style="font-size:10.5px;color:#94a3b8;font-weight:500">×${r.voucher_print_qty}</span>`:''} ${dl}</div>`;}return'';})()}
                 ${r.trackingUrl?`<div style="margin-top:5px"><a href="${r.trackingUrl}" target="_blank" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #bfdbfe">📊 Tracking</a></div>`:''}
+                ${r.track==='venue'&&r.venue_schedules&&r.venue_schedules.length?(()=>{
+                  const confirmed=r.venue_schedules.filter(vs=>vs.confirmed);
+                  const pending=r.venue_schedules.filter(vs=>!vs.confirmed);
+                  return`<div style="margin-top:5px;display:flex;flex-direction:column;gap:3px">
+                    ${confirmed.map(vs=>`<div style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#14532d;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">🏢 ${vs.phong} — ${fmtDate(vs.date)||vs.date}</div>`).join('')}
+                    ${pending.length?`<div style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#92400e;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600">⏳ ${pending.length} lịch chờ xác nhận</div>`:''}
+                  </div>`;
+                })():''}
               </div>`;}).join('')}
           </div>
         </div>`).join('')}
@@ -1870,8 +1932,8 @@ function renderList(){
       <td><span class="stage-badge" style="background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
       <td style="font-weight:700;color:var(--acc)">${fmtMoney(ot)}${ot===0?'<span style="color:#d97706;font-size:11px;margin-left:4px">chưa offer</span>':''}${needsApproval(r)?'<span style="display:inline-flex;align-items:center;gap:3px;background:#7c3aed;color:#fff;border-radius:4px;padding:1px 6px;font-size:10.5px;font-weight:700;margin-left:5px">⏳</span>':''}</td>
       <td style="${days!==null&&days<=14?'color:#dc2626;font-weight:600':'color:#64748b'}">${r.deadlineDate||'—'}</td>
-      <td style="font-family:monospace;font-size:12px;color:#334155">${r.mavoucher||'<span style="color:#cbd5e1">—</span>'}${vs?`<div style="font-size:10px;font-weight:600;color:${vs.c};background:${vs.bg};display:inline-block;padding:1px 5px;border-radius:3px;margin-top:2px;font-family:sans-serif">${vs.i} ${vs.t}</div>`:''}${r.voucher_print_qty?`<div style="font-size:10px;color:var(--tx3);font-family:sans-serif;margin-top:1px">${r.voucher_print_qty} voucher</div>`:''}</td>
-      <td style="font-size:12px;${hanDays!==null&&hanDays<=14?'color:#dc2626;font-weight:600':'color:#64748b'}">${fmtDate(r.hanvoucher)||'<span style="color:#cbd5e1">—</span>'}${hanDays!==null&&hanDays<=7?`<div style="font-size:10.5px;color:#dc2626">${hanDays<=0?'Đã hết hạn':'còn '+hanDays+'n'}</div>`:''}</td>
+      <td style="font-family:monospace;font-size:12px;color:#334155">${r.track==='venue'?(r.venue_schedules&&r.venue_schedules.length?r.venue_schedules.map(vs=>`<div style="font-size:11px;font-family:sans-serif;color:#065f46;font-weight:600">🏢 ${vs.phong||'?'} ${fmtDate(vs.date)||vs.date||''}</div>`).join(''):'<span style="color:#cbd5e1">—</span>'):r.mavoucher||'<span style="color:#cbd5e1">—</span>'}${r.track!=='venue'&&vs?`<div style="font-size:10px;font-weight:600;color:${vs.c};background:${vs.bg};display:inline-block;padding:1px 5px;border-radius:3px;margin-top:2px;font-family:sans-serif">${vs.i} ${vs.t}</div>`:''}${r.track!=='venue'&&r.voucher_print_qty?`<div style="font-size:10px;color:var(--tx3);font-family:sans-serif;margin-top:1px">${r.voucher_print_qty} voucher</div>`:''}</td>
+      <td style="font-size:12px;${hanDays!==null&&hanDays<=14?'color:#dc2626;font-weight:600':'color:#64748b'}">${r.track==='venue'?'<span style="color:#cbd5e1">—</span>':fmtDate(r.hanvoucher)||'<span style="color:#cbd5e1">—</span>'}${r.track!=='venue'&&hanDays!==null&&hanDays<=7?`<div style="font-size:10.5px;color:#dc2626">${hanDays<=0?'Đã hết hạn':'còn '+hanDays+'n'}</div>`:''}</td>
       <td onclick="event.stopPropagation()" style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="openAddModal('${r.id}')" title="Xem hồ sơ đầy đủ" style="font-size:12px;padding:4px 9px">📋 Xem đầy đủ</button>
         <button class="icon-btn" style="color:#dc2626" onclick="deleteRecord('${r.id}')" title="Xoá">${ICO.trash}</button>
@@ -2658,6 +2720,98 @@ function appendMapsTrackingNote(){
   ].join('\n');
   const el=document.getElementById('f_tracking');
   if(el){el.value=(el.value?el.value+'\n\n':'')+note;showToast('✅ Đã thêm vào Tracking','success',2000);}
+}
+
+// ══ VENUE SCHEDULE (Tài trợ địa điểm) ══
+function addVenueSchedule(){
+  _venueScheduleDraft.push({id:uid(),date:'',ca:'1_sang',muc_dich:'',suc_chua:'',phong:'',gia:0,confirmed:false});
+  renderVenueSchedules();
+}
+function removeVenueSchedule(idx){
+  _venueScheduleDraft.splice(idx,1);
+  renderVenueSchedules();
+}
+function updateVenueSchedule(idx, field, value){
+  if(!_venueScheduleDraft[idx])return;
+  _venueScheduleDraft[idx][field]=value;
+  if(field==='suc_chua'||field==='ca'){
+    const vs=_venueScheduleDraft[idx];
+    const sc=parseInt(vs.suc_chua)||0;
+    if(sc>0) _venueScheduleDraft[idx].gia=venuePrice(sc,vs.ca);
+    else _venueScheduleDraft[idx].gia=0;
+  }
+  renderVenueSchedules();
+}
+function confirmVenueSchedule(idx){
+  const vs=_venueScheduleDraft[idx];
+  if(!vs||!vs.date||!vs.phong){showToast('⚠️ Vui lòng chọn ngày và phòng trước khi xác nhận','warn');return;}
+  _venueScheduleDraft[idx].confirmed=true;
+  // Add block to room schedule localStorage
+  const RS_LS_KEY='pne_venue_blocks';
+  const blocks=JSON.parse(localStorage.getItem(RS_LS_KEY)||'[]');
+  // Determine times based on ca
+  let start='07:30',end='17:00';
+  if(vs.ca==='1_sang'){start='07:30';end='11:30';}
+  else if(vs.ca==='1_chieu'){start='13:00';end='17:00';}
+  else{start='07:30';end='17:00';}
+  // Org name from form
+  const org=(document.getElementById('f_org')||{}).value||'Tài trợ';
+  const abbrev=((document.getElementById('f_school_abbrev')||{}).value||org).slice(0,6).toUpperCase();
+  const code=abbrev+' Tài trợ';
+  const existing=blocks.findIndex(b=>b._vsId===vs.id);
+  const block={_vsId:vs.id,room:vs.phong,date:vs.date,start,end,code,teacher:'',hv:parseInt(vs.suc_chua)||0,cap:(RS_ROOMS.find(r=>r.id===vs.phong)||{cap:0}).cap,type:'venue'};
+  if(existing>=0)blocks[existing]=block;else blocks.push(block);
+  localStorage.setItem(RS_LS_KEY,JSON.stringify(blocks));
+  showToast('✅ Đã xác nhận phòng '+vs.phong+' ngày '+vs.date,'success',3000);
+  renderVenueSchedules();
+}
+function renderVenueSchedules(){
+  const cont=document.getElementById('venue_schedule_list');
+  if(!cont)return;
+  if(!_venueScheduleDraft.length){cont.innerHTML='<div style="font-size:12px;color:#6b7280;text-align:center;padding:8px 0">Chưa có lịch nào. Bấm "+ Thêm lịch" để thêm.</div>';return;}
+  const CA_OPTS=[
+    {v:'1_sang',l:'1 buổi sáng (7:30–11:30)'},
+    {v:'1_chieu',l:'1 buổi chiều (13:00–17:00)'},
+    {v:'2_buoi',l:'2 buổi (7:30–17:00)'},
+    {v:'ca_ngay',l:'Cả ngày (7:30–17:00)'},
+  ];
+  cont.innerHTML=_venueScheduleDraft.map((vs,i)=>{
+    const sc=parseInt(vs.suc_chua)||0;
+    // Suggest rooms that fit capacity
+    const suggestedRooms=sc>0?RS_ROOMS.filter(r=>r.cap>=sc):RS_ROOMS;
+    const roomOpts=RS_ROOMS.map(r=>{
+      const fits=sc===0||r.cap>=sc;
+      return`<option value="${r.id}" ${vs.phong===r.id?'selected':''} ${!fits?'style="color:#9ca3af"':''}>${r.label} (${r.cap}ng)${!fits?' ⚠️':''}</option>`;
+    }).join('');
+    const gia=vs.gia?`<span style="font-weight:700;color:#059669">${fmtMoney(vs.gia)}</span>`:'—';
+    const isConfirmed=vs.confirmed;
+    return`<div style="background:#f9fafb;border:1px solid ${isConfirmed?'#059669':'#d1fae5'};border-radius:10px;padding:12px 14px;position:relative">
+      <button onclick="removeVenueSchedule(${i})" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#dc2626;font-size:14px" title="Xoá">✕</button>
+      ${isConfirmed?'<div style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#14532d;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:8px">✅ Đã xác nhận phòng</div>':''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Ngày sử dụng</label>
+          <input type="date" value="${vs.date||''}" onchange="updateVenueSchedule(${i},'date',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Ca sử dụng</label>
+          <select onchange="updateVenueSchedule(${i},'ca',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+            ${CA_OPTS.map(o=>`<option value="${o.v}" ${vs.ca===o.v?'selected':''}>${o.l}</option>`).join('')}
+          </select></div>
+      </div>
+      <div style="margin-bottom:8px"><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Mục đích</label>
+        <input value="${vs.muc_dich||''}" placeholder="Khai giảng, Hội thảo…" onchange="updateVenueSchedule(${i},'muc_dich',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Sức chứa cần (người)</label>
+          <input type="number" min="1" value="${vs.suc_chua||''}" placeholder="VD: 30" oninput="updateVenueSchedule(${i},'suc_chua',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Phòng được chọn${sc>0?` <span style="font-size:10px;color:#059669">(≥${sc}ng gợi ý)</span>`:''}</label>
+          <select onchange="updateVenueSchedule(${i},'phong',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
+            <option value="">-- Chọn phòng --</option>${roomOpts}
+          </select></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#ecfdf5;border-radius:8px">
+        <span style="font-size:12px;color:#065f46;font-weight:600">Giá trị: ${gia}</span>
+        <button onclick="confirmVenueSchedule(${i})" class="btn btn-sm" style="${isConfirmed?'background:#9ca3af;cursor:not-allowed':'background:#059669'};color:#fff;font-size:11.5px;padding:4px 12px" ${isConfirmed?'disabled':''}>🏢 Xác nhận phòng</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function showTamChot(){
@@ -3494,13 +3648,15 @@ function openAddModal(id){
       if(lEl&&savedLabel)lEl.textContent=savedLabel;
       // Load room + mapsReview drafts ngay khi mở modal (bất kể tab nào được auto-chọn)
       loadRoomDraftFromRecord(r);
+      // Load venue schedule draft
+      _venueScheduleDraft=(r.venue_schedules||[]).map(vs=>({...vs,id:vs.id||uid()}));
     }
   }else{
     ['f_org','f_event','f_school','f_school_abbrev','f_event_budget','f_prize_structure','f_activity_list','f_event_budget_chain','f_proposalUrl','f_hangmuc','f_contact','f_phone','f_zalo_group','f_notes','f_proposalText','f_receivedDate','f_deadlineDate','f_final_offer_note','f_contract_note','f_signing_date','f_contract_link','f_hopdong','f_mavoucher','f_hanvoucher','f_voucher_print_qty','f_voucher_print_deadline','f_anhsukien','f_data','f_tracking','f_username','f_password','f_expiry','f_test_account_type','f_test_offer_note'].forEach(fid=>document.getElementById(fid).value='');
     document.getElementById('f_voucher_status').value='';onVoucherStatusChange('');
     document.getElementById('f_test_platform').value='test_online';
     _negDraft=null;_negTestPkgIdx=null;
-    _roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};
+    _roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};_venueScheduleDraft=[];
     document.getElementById('f_lienhe_status').value='moi';
     modalToggleZalo('moi');
     document.getElementById('f_event_type').value='';
@@ -3565,6 +3721,7 @@ function saveRecord(){
       if(_pendingApproval)r.approval=_pendingApproval;
       r.roomSponsorships=_roomDraft.filter(e=>e.date||e.purpose||(e.rooms&&e.rooms.some(rm=>rm.capacity)));
       if(_mapsReviewDraft.qty>0)r.mapsReview={qty:_mapsReviewDraft.qty,perMap:[..._mapsReviewDraft.perMap]};else delete r.mapsReview;
+      if(r.track==='venue')r.venue_schedules=_venueScheduleDraft.map(vs=>({...vs}));
       // Tự động chuyển stage khi duyệt/từ chối offer
       if(_pendingApproval&&_pendingApproval.status==='approved'&&['received','reviewing','offered'].includes(r.stage))r.stage='negotiating';
       if(_pendingApproval&&_pendingApproval.status==='rejected'&&['received','offered'].includes(r.stage))r.stage='reviewing';
@@ -3583,6 +3740,7 @@ function saveRecord(){
     const newRec={id:uid(),org,event,school:document.getElementById('f_school').value.trim(),school_abbrev:document.getElementById('f_school_abbrev').value.trim().toUpperCase(),event_type:document.getElementById('f_event_type').value,final_attendance:document.getElementById('f_final_attendance').value.trim(),event_budget:document.getElementById('f_event_budget').value.trim(),prize_structure:document.getElementById('f_prize_structure').value.trim(),activity_list:document.getElementById('f_activity_list').value.trim(),event_budget_chain:document.getElementById('f_event_budget_chain').value.trim(),track:document.getElementById('f_track').value,cat:document.getElementById('f_cat').value,stage:autoStage,year:document.getElementById('f_year').value,receivedDate:document.getElementById('f_receivedDate').value,deadlineDate:document.getElementById('f_deadlineDate').value,proposalUrl:document.getElementById('f_proposalUrl').value,hangmuc:getHangmucVal(),contact,phone:document.getElementById('f_phone').value.trim(),zaloGroup:document.getElementById('f_zalo_group').value.trim(),notes:document.getElementById('f_notes').value,proposalText:proposalTextVal,benefits:[],offer:inlineOffer,clbPackages:_extracted.clbPackages||[],approval:_pendingApproval||null,lienhe_status:document.getElementById('f_lienhe_status').value,neg_items:negItems||[],neg_benefits:negBenefits||[],final_offer:negTotal||0,final_offer_type:document.getElementById('f_final_offer_type').value,final_offer_note:document.getElementById('f_final_offer_note').value,contract_status:document.getElementById('f_contract_status').value,contract_method:document.getElementById('f_contract_method').value,signing_date:document.getElementById('f_signing_date').value,contract_link:document.getElementById('f_contract_link').value,contract_note:document.getElementById('f_contract_note').value,hopdong:document.getElementById('f_hopdong').value.trim(),mavoucher:document.getElementById('f_mavoucher').value.trim(),hanvoucher:document.getElementById('f_hanvoucher').value,voucher_print_qty:document.getElementById('f_voucher_print_qty').value,voucher_status:document.getElementById('f_voucher_status').value,voucher_print_deadline:document.getElementById('f_voucher_print_deadline').value,anhsukien:document.getElementById('f_anhsukien').value.trim(),data:document.getElementById('f_data').value.trim(),tracking:document.getElementById('f_tracking').value.trim(),username:document.getElementById('f_username').value.trim(),password:document.getElementById('f_password').value.trim(),expiry:document.getElementById('f_expiry').value,test_platform:document.getElementById('f_test_platform').value,test_account_type:document.getElementById('f_test_account_type').value.trim(),test_offer_note:document.getElementById('f_test_offer_note').value.trim()};
     newRec.roomSponsorships=_roomDraft.filter(e=>e.date||e.purpose||(e.rooms&&e.rooms.some(rm=>rm.capacity)));
     if(_mapsReviewDraft.qty>0)newRec.mapsReview={qty:_mapsReviewDraft.qty,perMap:[..._mapsReviewDraft.perMap]};
+    if(newRec.track==='venue')newRec.venue_schedules=_venueScheduleDraft.map(vs=>({...vs}));
     newRec.updatedAt=new Date().toISOString();
     a.push(newRec);
   }
@@ -3592,7 +3750,7 @@ function saveRecord(){
   const voucherPrintDeadlineSave=document.getElementById('f_voucher_print_deadline')?.value||'';
   const isNewRecord=!_editId;
   const savedId=_editId||(a[a.length-1]&&a[a.length-1].id);
-  _pendingApproval=null;_offerInlineDraft=[];_negDraft=null;_roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};
+  _pendingApproval=null;_offerInlineDraft=[];_negDraft=null;_roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};_venueScheduleDraft=[];
   // Save with error handling + verification
   try{
     saveAll(a);
@@ -3689,7 +3847,8 @@ function populateNegotiatePanel(r){
   // Toggle sections
   const vs=document.getElementById('neg_voucher_section');
   const ts=document.getElementById('neg_test_section');
-  if(vs)vs.style.display=isTest?'none':'';
+  const isVenueNeg=track==='venue';
+  if(vs)vs.style.display=(isTest||isVenueNeg)?'none':'';
   if(ts)ts.style.display=isTest?'':'none';
 
   // Khôi phục pkg index đã lưu (hoặc 0 nếu chưa có)
@@ -4256,21 +4415,26 @@ function autoFillTestOffer(){
 function updateModalForTrack(){
   const track=document.getElementById('f_track')?.value||'voucher';
   const isTest=track==='test';
+  const isVenue=track==='venue';
   // Exec tab fields
   const vFields=document.getElementById('exec_voucher_fields');
   const tFields=document.getElementById('exec_test_fields');
-  if(vFields)vFields.style.display=isTest?'none':'';
+  if(vFields)vFields.style.display=(isTest||isVenue)?'none':'';
   if(tFields)tFields.style.display=isTest?'':'none';
   // Exec tab description
   const execDesc=document.getElementById('exec_tab_desc');
   if(execDesc)execDesc.textContent=isTest
     ?'Thông tin sau khi ký kết hợp đồng — tài khoản nền tảng, hình ảnh, báo cáo'
+    :isVenue
+    ?'Thông tin sau khi ký kết hợp đồng — xác nhận phòng, lịch sử dụng, hình ảnh'
     :'Thông tin sau khi ký kết hợp đồng — voucher, hình ảnh, báo cáo data';
   // Offer tab sections
   const vSection=document.getElementById('offer_voucher_section');
   const tSection=document.getElementById('offer_test_section');
-  if(vSection)vSection.style.display=isTest?'none':'';
+  const venueSection=document.getElementById('offer_venue_section');
+  if(vSection)vSection.style.display=(isTest||isVenue)?'none':'';
   if(tSection)tSection.style.display=isTest?'':'none';
+  if(venueSection)venueSection.style.display=isVenue?'':'none';
   // Prompt template box
   const promptBox=document.getElementById('promptTemplateBox');
   if(promptBox)promptBox.textContent=isTest?getTestPromptTemplate():getVoucherPromptTemplate();
@@ -4283,6 +4447,8 @@ function updateModalForTrack(){
   }
   // Cập nhật offer label theo nền tảng
   if(isTest) autoFillTestOffer();
+  // Render venue schedules nếu cần
+  if(isVenue) renderVenueSchedules();
 }
 
 function copyPromptTemplate(btn){
@@ -4640,7 +4806,7 @@ function _autoSyncPull(){
       const allDel   = new Set([...localDel,...gasDel]);
       if(gasDel.length>0) localStorage.setItem('pne_deleted',JSON.stringify([...allDel]));
       let newCount=0, updatedCount=0;
-      const _LOCAL_FIELDS=['proposalText','clbPackages','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
+      const _LOCAL_FIELDS=['proposalText','neg_items','neg_benefits','benefits','roomSponsorships','mapsReview','offer'];
       data.records.forEach(gasRec=>{
         if(allDel.has(gasRec.id)) return;
         const localRec=localMap.get(gasRec.id);
