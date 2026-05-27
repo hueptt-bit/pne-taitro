@@ -4890,10 +4890,7 @@ function _autoSyncPull(){
       if(newCount>0||updatedCount>0){
         saveAll([...localMap.values()],{noPush:true});
         render();
-        const parts=[];
-        if(newCount>0) parts.push('🔔 '+newCount+' hồ sơ mới');
-        if(updatedCount>0) parts.push('🔄 '+updatedCount+' cập nhật');
-        showToast(parts.join(' · '),'success',4000);
+        if(newCount>0) showToast('🔔 '+newCount+' hồ sơ mới','success',4000);
       }
     })
     .catch(e => console.warn('auto-sync lỗi:', e));
