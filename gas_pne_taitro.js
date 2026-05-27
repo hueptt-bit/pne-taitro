@@ -4,16 +4,31 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CONFIG = {
-  TG_TOKEN:        '8883609953:AAEe88AtNr808jQhJ0gZM8ntX7ShSVXfHTI',
-  TG_CHAT_ID:      '-5110564753',          // Group chính (nhận hồ sơ mới, liên hệ...)
-  TG_EXEC_CHAT_ID: '-5158615383',           // Group thực thi [Tài trợ] Trả quyền lợi
-  SHEET_NAME:      'Records',
-  DELETED_SHEET:   'Deleted',          // Sheet lưu các ID đã xoá
-  SPREADSHEET_ID:  '1zXOliDHlkELXzLE0dIAZc9s5ubbD5Knglfa94Y-hAfs',
-  WEB_APP_URL:     'https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnTXI-HjZxodBhBFqTEc_RRZLPsFJJ9lEuLIpZAe1DEftZPxO7Q_CVPkunevlVKqOgalz2N3zlM0e0uInE7AXMkWcY99mA6EZhNJwR_W1HRSdoYt1THL-dN3dCnfW1USDp9lWQ9dekFOuKjjmcXFp4c3IdszennARUXp0rwCvLFsgBG4qW3k0PQechIc-POsyiMQZA7iDIZ5bykeeH6NEQHIixW3JLb8m3QTNNYcDAKN5dqvPjFtnPaUGJw7b-wbxRFqW9eVDyoJRX4l5E0E7jhqB0phUQ&lib=MFQwz8DyVTbWMbb5Iwgo6vMhD9dEftbu5',
-  DASHBOARD_URL:   'https://hueptt-bit.github.io/pne-taitro/dashboard.html',
-  GMAIL_QUERY:     '-label:pne-processed newer_than:3d',
-  GMAIL_LABEL:     'pne-processed',
+  TG_TOKEN:          '8883609953:AAEe88AtNr808jQhJ0gZM8ntX7ShSVXfHTI',
+  TG_CHAT_ID:        '-5110564753',          // Group chính (nhận hồ sơ mới, liên hệ...)
+  TG_EXEC_CHAT_ID:   '-5158615383',           // Group thực thi [Tài trợ] Trả quyền lợi
+  TG_VOUCHER_CHAT_ID:'-5285106597',           // Group in voucher (nhận yêu cầu in + xác nhận)
+  SHEET_NAME:        'Records',
+  DELETED_SHEET:     'Deleted',          // Sheet lưu các ID đã xoá
+  SPREADSHEET_ID:    '1zXOliDHlkELXzLE0dIAZc9s5ubbD5Knglfa94Y-hAfs',
+  WEB_APP_URL:       'https://script.google.com/macros/s/AKfycbzbj-icBWeMN-_5c7wV1SnAoWgk3dtcwzaSj_j_emrvAibrx_HwFr17s7cSngZVjz_VYQ/exec',
+  DASHBOARD_URL:     'https://hueptt-bit.github.io/pne-taitro/dashboard.html',
+  GMAIL_QUERY:       '-label:pne-processed newer_than:3d',
+  GMAIL_LABEL:       'pne-processed',
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAPS REVIEW — hằng số dùng khi tạo tracking
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// VOUCHER — nhãn hiển thị cho từng loại voucher
+// ═══════════════════════════════════════════════════════════════
+
+const VOUCHER_TYPE_LABELS = {
+  '100%': '100% (9.8M)', '80%': '80% (7.84M)', '50%': '50% (4.9M)',
+  '35%': '35% (3.43M)', '30%': '30% (2.94M)', '25%': '25% (2.45M)',
+  '20%': '20% (1.96M)', '15%': '15% (1.47M)', 'Gấu bông': 'Gấu bông (180K)',
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -67,8 +82,11 @@ const COLS = [
   { key: 'contract_link',     label: 'Link hợp đồng' },
   { key: 'contract_note',     label: 'Ghi chú HĐ' },
   // ── Voucher ────────────────────────────────────────────────
-  { key: 'mavoucher',         label: 'Mã voucher' },
-  { key: 'hanvoucher',        label: 'Hạn voucher' },
+  { key: 'mavoucher',              label: 'Mã voucher' },
+  { key: 'hanvoucher',             label: 'Hạn voucher' },
+  { key: 'voucher_status',         label: 'TT in voucher' },
+  { key: 'voucher_print_qty',      label: 'SL in' },
+  { key: 'voucher_print_deadline', label: 'Deadline in' },
   // ── Thực thi ───────────────────────────────────────────────
   { key: 'anhsukien',         label: 'Album ảnh sự kiện' },
   { key: 'data',              label: 'Link data' },
@@ -435,6 +453,10 @@ function doPost(e) {
   if (action === 'createTracking') {
     try { return jsonResponse(createTrackingForRecord(body.id)); }
     catch(e) { return jsonResponse({ ok: false, error: 'createTracking: ' + e.message }); }
+  }
+  if (action === 'voucherPrintNotify') {
+    try { return jsonResponse(handleVoucherPrintNotify(body)); }
+    catch(e) { return jsonResponse({ ok: false, error: 'voucherPrintNotify: ' + e.message }); }
   }
 
   if (action === 'login') {
@@ -967,6 +989,8 @@ function handleTelegramCallback(cq) {
     const props = PropertiesService.getScriptProperties();
     props.setProperty('pending_zalo_' + chatId, recordId);
     props.setProperty('pending_zalo_time_' + chatId, String(Math.floor(Date.now() / 1000)));
+    tgCall('answerCallbackQuery', { callback_query_id: cq.id });
+    return;
   }
 
   if (action === 'close_record') {
@@ -976,6 +1000,54 @@ function handleTelegramCallback(cq) {
       `✅ <b>Hồ sơ đã được đóng!</b>\n\n` +
       (rec ? `🏫 ${escHtml(rec.org)}\n📌 ${escHtml(rec.event)}\n` : '') +
       `📋 Trạng thái → <b>Hoàn thành</b>`);
+    tgCall('answerCallbackQuery', { callback_query_id: cq.id });
+    return;
+  }
+
+  // ── Voucher: xác nhận đã in ──
+  if (action === 'confirm_print') {
+    // Kiểm tra xem đã xác nhận trước đó chưa — tránh spam khi bấm nhiều lần
+    const rowIdx = findRowById(recordId);
+    if (rowIdx > 0) {
+      const row = getSheet().getRange(rowIdx, 1, 1, COLS.length).getValues()[0];
+      if (rowToRecord(row).voucher_status === 'da_in') {
+        tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '⚠️ Đã xác nhận trước đó rồi!', show_alert: true });
+        // Xoá nút trên tin này luôn (nếu chưa xoá)
+        tgCall('editMessageReplyMarkup', { chat_id: chatId, message_id: msgId, reply_markup: { inline_keyboard: [] } });
+        return;
+      }
+    }
+    updateRecordField(recordId, 'voucher_status', 'da_in');
+    tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Đã xác nhận!' });
+    const userName = (cq.from && cq.from.first_name) || 'ai đó';
+    // Xoá nút inline keyboard (tránh xung đột parse_mode giữa Markdown và HTML)
+    tgCall('editMessageReplyMarkup', {
+      chat_id: chatId, message_id: msgId,
+      reply_markup: { inline_keyboard: [] }
+    });
+    // Gửi tin xác nhận mới
+    tgCall('sendMessage', {
+      chat_id: chatId,
+      text: `✅ *Đã in* — xác nhận bởi ${userName}\nHồ sơ: \`${recordId}\``,
+      parse_mode: 'Markdown',
+    });
+    return;
+  }
+
+  // ── Voucher: báo lỗi in ──
+  if (action === 'print_error') {
+    tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '❗ Đã ghi nhận lỗi' });
+    const userName = (cq.from && cq.from.first_name) || 'ai đó';
+    tgCall('editMessageReplyMarkup', {
+      chat_id: chatId, message_id: msgId,
+      reply_markup: { inline_keyboard: [] }
+    });
+    tgCall('sendMessage', {
+      chat_id: chatId,
+      text: `❗ *Báo lỗi in* từ ${userName}\nHồ sơ: \`${recordId}\`\nVui lòng kiểm tra lại yêu cầu.`,
+      parse_mode: 'Markdown',
+    });
+    return;
   }
 
   tgCall('answerCallbackQuery', { callback_query_id: cq.id });
@@ -1030,7 +1102,7 @@ function checkTelegramUpdates() {
 function tgCall(method, payload) {
   return UrlFetchApp.fetch(
     'https://api.telegram.org/bot' + CONFIG.TG_TOKEN + '/' + method,
-    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload) });
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true });
 }
 function editTgMessage(chatId, msgId, text) {
   tgCall('editMessageText', { chat_id: chatId, message_id: msgId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } });
@@ -1043,6 +1115,70 @@ function escHtml(s) {
 }
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VOUCHER PRINT NOTIFY — gửi yêu cầu in vào Group in voucher
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Gửi thông báo yêu cầu in voucher vào TG_VOUCHER_CHAT_ID.
+ * Payload từ dashboard: { id, org, event, school, mavoucher,
+ *   voucher_print_qty, voucher_print_deadline, neg_items }
+ */
+function handleVoucherPrintNotify(payload) {
+  const { id, org, event, school, mavoucher, voucher_print_qty, voucher_print_deadline, neg_items } = payload;
+
+  // Rate-limit: không gửi lại trong vòng 5 phút (tránh spam khi dashboard gửi trùng)
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'voucher_notify_' + id;
+  if (cache.get(cacheKey)) return { ok: true, skipped: true };
+  cache.put(cacheKey, '1', 300); // 5 phút
+
+  // Build breakdown chi tiết voucher theo loại
+  const breakdown = (neg_items || [])
+    .filter(i => !i.isCash && (+i.qty || 0) > 0)
+    .map(i => `  • ${i.qty}× ${VOUCHER_TYPE_LABELS[i.type] || i.type}`)
+    .join('\n');
+
+  // Format deadline dd/mm/yyyy
+  const dlFormatted = voucher_print_deadline
+    ? voucher_print_deadline.split('-').reverse().join('/')
+    : '(chưa xác định)';
+
+  // Format dải mã: prefix.01 → prefix.NN
+  const vPrefix = (mavoucher || '').replace(/\.\d{2}$/, '');
+  const qty = parseInt(voucher_print_qty) || 0;
+  const codeRange = vPrefix && qty > 0
+    ? `\`${vPrefix}.01\` → \`${vPrefix}.${String(qty).padStart(2, '0')}\``
+    : mavoucher ? `\`${mavoucher}\`` : '(chưa có mã)';
+
+  const msg = [
+    '🎟️ *YÊU CẦU IN VOUCHER*',
+    '',
+    `📌 *Chương trình:* ${org} — ${event}`,
+    school ? `🏫 *Trường:* ${school}` : null,
+    `🆔 *Mã:* ${codeRange}`,
+    `📦 *Tổng:* ${qty} voucher`,
+    breakdown ? `\n*Chi tiết:*\n${breakdown}` : null,
+    `\n⏰ *Deadline in:* ${dlFormatted}`,
+  ].filter(Boolean).join('\n');
+
+  const res = tgCall('sendMessage', {
+    chat_id: CONFIG.TG_VOUCHER_CHAT_ID,
+    text: msg,
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '✅ Xác nhận đã in', callback_data: `confirm_print:${id}` },
+        { text: '❌ Báo lỗi',        callback_data: `print_error:${id}` },
+      ]]
+    },
+  });
+
+  const result = JSON.parse(res.getContentText());
+  if (!result.ok) throw new Error('Telegram: ' + (result.description || 'unknown'));
+  return { ok: true };
 }
 
 // ═══════════════════════════════════════════════════════════════

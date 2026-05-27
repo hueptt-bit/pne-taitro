@@ -3793,6 +3793,8 @@ function saveRecord(){
   const contractStatus=document.getElementById('f_contract_status')?.value||'';
   const voucherStatusSave=document.getElementById('f_voucher_status')?.value||'';
   const voucherPrintDeadlineSave=document.getElementById('f_voucher_print_deadline')?.value||'';
+  // Lấy trạng thái voucher CŨ (trước khi lưu) để chỉ gửi Telegram khi CHUYỂN sang chuyen_in
+  const _oldVoucherStatus=_editId?(loadAll().find(x=>x.id===_editId)?.voucher_status||''):'';
   const isNewRecord=!_editId;
   const savedId=_editId||(a[a.length-1]&&a[a.length-1].id);
   _pendingApproval=null;_offerInlineDraft=[];_negDraft=null;_roomDraft=[];_mapsReviewDraft={qty:0,perMap:[0,0,0]};_venueScheduleDraft=[];
@@ -3815,8 +3817,8 @@ function saveRecord(){
     console.error('saveRecord error:',e);
     return;
   }
-  // Gửi Telegram thông báo in nếu chọn "Chuyển in"
-  if(voucherStatusSave==='chuyen_in'&&GAS_URL){
+  // Gửi Telegram thông báo in chỉ khi CHUYỂN SANG chuyen_in (không gửi lại nếu đã là chuyen_in)
+  if(voucherStatusSave==='chuyen_in'&&_oldVoucherStatus!=='chuyen_in'&&GAS_URL){
     const nr=loadAll().find(x=>x.id===savedId);
     if(nr){
       fetch(GAS_URL,{method:'POST',body:JSON.stringify({
