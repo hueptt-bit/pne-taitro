@@ -740,7 +740,16 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
           <div style="color:var(--tx3);font-size:13px;text-align:center;padding:20px 0">Chưa có dữ liệu — hãy phân tích hồ sơ ở tab <em>Hồ sơ xin tài trợ</em> trước</div>
         </div>
         <div class="rp-divider" style="margin:14px 0"></div>
-        <!-- PNE Voucher Calculator inline (chỉ hiện cho track Voucher PNE) -->
+        <!-- Venue (Tài trợ địa điểm) section — chỉ hiện cho track venue -->
+        <div id="offer_venue_section" style="display:none">
+          <div style="background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+            <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:10px">🏢 Tài trợ địa điểm — Đề xuất phòng</div>
+            <div id="venue_schedule_list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px"></div>
+            <button onclick="addVenueSchedule()" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px;border-style:dashed;border-color:#059669;color:#059669">+ Thêm lịch</button>
+          </div>
+          <div class="rp-divider" style="margin:14px 0"></div>
+        </div>
+        <!-- PNE Voucher Calculator inline (chỉ hiện cho track Voucher PNE và Venue) -->
         <div id="offer_voucher_section">
           <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--tx1)">🧮 Tính offer PNE</div>
           <div id="offerCalcRows"></div>
@@ -783,15 +792,6 @@ body{display:flex;height:100vh;overflow:hidden;font-family:'Plus Jakarta Sans',-
               <div id="roomEntriesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
               <button onclick="addRoomEntry()" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px;border-style:dashed">+ Thêm lịch phòng</button>
             </div>
-          </div>
-          <div class="rp-divider" style="margin:14px 0"></div>
-        </div>
-        <!-- Venue (Tài trợ địa điểm) section — chỉ hiện cho track venue -->
-        <div id="offer_venue_section" style="display:none">
-          <div style="background:#ecfdf5;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 16px;margin-bottom:14px">
-            <div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:10px">🏢 Tài trợ địa điểm — Đề xuất phòng</div>
-            <div id="venue_schedule_list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px"></div>
-            <button onclick="addVenueSchedule()" class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px;border-style:dashed;border-color:#059669;color:#059669">+ Thêm lịch</button>
           </div>
           <div class="rp-divider" style="margin:14px 0"></div>
         </div>
@@ -1294,8 +1294,9 @@ function daysUntil(ds){if(!ds)return null;const d=new Date(ds),t=new Date();t.se
 function fmtDate(ds){if(!ds)return null;const iso=String(ds).match(/(\d{4})-(\d{2})-(\d{2})/);if(iso)return`${iso[3]}/${iso[2]}/${iso[1]}`;try{const d=new Date(ds);if(!isNaN(d))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}catch{}return ds;}
 function offerTotal(r){
   if(r.track==='venue'){
-    if(!r.venue_schedules||!r.venue_schedules.length)return 0;
-    return r.venue_schedules.reduce((s,vs)=>s+(+vs.gia||0),0);
+    const venueTotal=(r.venue_schedules||[]).reduce((s,vs)=>s+(+vs.gia||0),0);
+    const voucherTotal=r.offer&&r.offer.items?r.offer.items.reduce((s,i)=>s+(i.isCash?+i.cashVal||0:(+i.qty||0)*(+i.maxVal||0)),0):0;
+    return venueTotal+voucherTotal;
   }
   if(!r.offer||!r.offer.items)return 0;
   return r.offer.items.reduce((s,i)=>s+(i.isCash?+i.cashVal||0:(+i.qty||0)*(+i.maxVal||0)),0);
@@ -4432,7 +4433,7 @@ function updateModalForTrack(){
   const vSection=document.getElementById('offer_voucher_section');
   const tSection=document.getElementById('offer_test_section');
   const venueSection=document.getElementById('offer_venue_section');
-  if(vSection)vSection.style.display=(isTest||isVenue)?'none':'';
+  if(vSection)vSection.style.display=isTest?'none':'';
   if(tSection)tSection.style.display=isTest?'':'none';
   if(venueSection)venueSection.style.display=isVenue?'':'none';
   // Prompt template box
