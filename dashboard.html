@@ -1435,8 +1435,7 @@ function setVoucherFilter(){ST.voucherFilter=true;ST.stageFilter=null;ST.approva
 function setYear(y){ST.year=y;render();}
 
 // ── ROOM SCHEDULE ──
-// Mock data — thay bằng API khi có
-const RS_ROOMS=[
+let RS_ROOMS=[
   {id:'P.17',label:'P.17',cap:20},{id:'P.20',label:'P.20',cap:12},{id:'P.21',label:'P.21',cap:12},
   {id:'P.22',label:'P.22',cap:15},{id:'P.23A',label:'P.23A',cap:8},{id:'P.23B',label:'P.23B',cap:9},
   {id:'P.24',label:'P.24',cap:10},{id:'P.25',label:'P.25',cap:6},{id:'P.25A',label:'P.25A',cap:15},
@@ -1445,6 +1444,27 @@ const RS_ROOMS=[
   {id:'P.61',label:'P.61',cap:12},{id:'P.62',label:'P.62',cap:8},{id:'P.63',label:'P.63',cap:12},
   {id:'P.64',label:'P.64',cap:4},{id:'P.65',label:'P.65',cap:10},{id:'P.71',label:'P.71',cap:10},
 ];
+let _roomsLoaded=false,_roomsFetching=false;
+async function fetchRooms(){
+  if(_roomsLoaded||_roomsFetching)return;
+  _roomsFetching=true;
+  try{
+    const res=await fetch('https://api.phuongnameducation.com/_/sponsorship/api/rooms',{headers:{'X-Api-Key':'uz9a3wdn44U1EGTv'}});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    RS_ROOMS=data
+      .filter(r=>r.label&&r.label!=='0')
+      .map(r=>({id:'P.'+r.label,label:'P.'+r.label,cap:r.cap,apiId:r.id}))
+      .sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true}));
+    _roomsLoaded=true;
+    renderRoomSchedule();
+  }catch(e){
+    console.warn('fetchRooms error:',e);
+    _roomsLoaded=true; // dùng fallback mock, không fetch lại
+  }finally{
+    _roomsFetching=false;
+  }
+}
 // Màu theo loại lớp
 function rsBlockColor(code, type){
   if(type==='venue')return{bg:'#059669',fg:'#fff'};
@@ -1523,6 +1543,7 @@ function rsNavWeek(delta){
 function rsSetTab(t){ST.rs.tab=t;renderRoomSchedule();}
 
 function renderRoomSchedule(){
+  if(!_roomsLoaded)fetchRooms(); // fetch real rooms, re-render khi xong
   const main=document.getElementById('content');
   // Init weekStart nếu chưa có
   if(!ST.rs.weekStart){
@@ -1623,7 +1644,7 @@ function renderRoomSchedule(){
         <span style="font-size:12px;color:var(--tx3);margin-left:4px">${dateLabel}</span>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
           <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
-          <div style="background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+          <div style="${_roomsLoaded?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#fef9c3;border:1px solid #fde047;color:#92400e'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsLoaded?'✅ '+RS_ROOMS.length+' phòng từ CRM':'⏳ Đang tải phòng...'}</div>
         </div>
       </div>
       <div class="rs-grid-wrap">
@@ -1705,7 +1726,7 @@ function renderRoomSchedule(){
         <button class="rs-today-btn" onclick="(()=>{ST.rs.weekStart='';ST.rs.date='${todayStr}';renderRoomSchedule()})()">Tuần này</button>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
           <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
-          <div style="background:#fef9c3;border:1px solid #fde047;color:#92400e;font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">📌 Mock data — chưa kết nối CRM</div>
+          <div style="${_roomsLoaded?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#fef9c3;border:1px solid #fde047;color:#92400e'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsLoaded?'✅ '+RS_ROOMS.length+' phòng từ CRM':'⏳ Đang tải phòng...'}</div>
         </div>
       </div>
       <div class="rs-grid-wrap">
