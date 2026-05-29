@@ -1518,47 +1518,36 @@ function rsBlockColor(code, type){
   const palette=['#6366f1','#0ea5e9','#10b981','#f59e0b','#8b5cf6'];
   return{bg:palette[hash%palette.length],fg:'#fff'};
 }
-// Mock sessions cho một ngày cụ thể (giữ nguyên theo ngày trong tuần)
-function rsMockSessions(dateStr){
-  const d=new Date(dateStr+'T00:00:00');const dow=d.getDay();// 0=CN,1=T2,...
-  const sessions=[];
-  const base=[
-    {room:'P.23B',code:'OFDEA1-322',teacher:'Võ Minh Thái',start:'10:00',end:'12:00',hv:2,cap:9},
-    {room:'P.23A',code:'OFFRA2-74',teacher:'Hoàng Ngọc Lâm',start:'12:30',end:'13:00',hv:8,cap:8},
-    {room:'P.23A',code:'OFDEA2-156',teacher:'Nguyễn Thị Hoài Linh',start:'15:45',end:'17:15',hv:9,cap:8},
-    {room:'P.25',code:'OFCNSC-39',teacher:'Phan Trinh Dinh',start:'17:00',end:'18:30',hv:1,cap:6},
-    {room:'P.23A',code:'THESOFA1.1-106',teacher:'Lưu Vũ Quốc Gia',start:'18:00',end:'20:00',hv:6,cap:8},
-    {room:'P.25',code:'OFFRB2-18',teacher:'Tô Lê Sang',start:'19:00',end:'21:00',hv:1,cap:6},
-    {room:'P.20',code:'HFROFA1.1-403',teacher:'An Phạm Diệu Châu',start:'18:30',end:'20:45',hv:6,cap:12},
-    {room:'P.21',code:'THKROFSC1.2-22',teacher:'Nguyễn Đức Thanh Trúc',start:'18:30',end:'20:45',hv:6,cap:12},
-    {room:'P.22',code:'THTHOFCB2-247',teacher:'Phạm Châu Hải My',start:'18:30',end:'20:45',hv:7,cap:15},
-    {room:'P.25A',code:'THTHOFTC1-135',teacher:'Dương Xuân Anh',start:'18:30',end:'20:45',hv:6,cap:15},
-    {room:'P.25B',code:'THTHOFTC1-134',teacher:'Phạm Sỹ Hiến',start:'18:30',end:'20:45',hv:8,cap:12},
-    {room:'P.22',code:'Cho thuê: Hoàng Mai (Họp nội bộ Saigon Kingland)',teacher:'',start:'08:00',end:'17:00',hv:0,cap:15},
-    {room:'P.54',code:'Cho thuê: Phúc Vinh (BUSINESS FRENCH REVISION)',teacher:'',start:'17:00',end:'21:00',hv:0,cap:15},
-    {room:'P.55',code:'Cho thuê: Anh Đào Mạnh Linh',teacher:'',start:'18:30',end:'21:00',hv:0,cap:20},
-    {room:'P.60',code:'OFTHTC-5',teacher:'Nguyễn Thị Hồng Vân',start:'13:00',end:'14:30',hv:6,cap:6},
-    {room:'P.61',code:'CTDEOFA1-401',teacher:'Trần Văn An',start:'18:30',end:'20:45',hv:10,cap:12},
-  ];
-  // Filter bỏ 1 số sessions theo ngày trong tuần để tạo sự đa dạng
-  base.forEach((s,i)=>{if((i+dow)%3!==0||s.code.startsWith('Cho thuê'))sessions.push(s);});
-  return sessions;
+// ── ROOM SCHEDULE — cache + fetch qua GAS proxy ──
+let _rsScheduleCache={};   // { 'YYYY-MM-DD': [...sessions] }
+let _rsLoadingDates=new Set(); // ngày đang fetch
+
+async function fetchRoomSchedule(dateStr){
+  if(_rsScheduleCache.hasOwnProperty(dateStr))return; // đã có cache (kể cả [])
+  if(_rsLoadingDates.has(dateStr))return;             // đang fetch
+  if(!GAS_URL)return;
+  _rsLoadingDates.add(dateStr);
+  try{
+    const res=await fetch(GAS_URL+'?action=getRoomSchedule&date='+dateStr);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    _rsScheduleCache[dateStr]=data.ok&&Array.isArray(data.sessions)?data.sessions:[];
+  }catch(e){
+    console.warn('fetchRoomSchedule error ('+dateStr+'):',e);
+    _rsScheduleCache[dateStr]=[];
+  }finally{
+    _rsLoadingDates.delete(dateStr);
+    // Re-render nếu đang nhìn tab lịch phòng
+    if(ST.view==='room_schedule')renderRoomSchedule();
+  }
 }
-function rsMockWeekSessions(roomId,weekStart){
-  const sessions={};
-  const _venueBlocks=JSON.parse(localStorage.getItem('pne_venue_blocks')||'[]');
+
+// Prefetch nhiều ngày song song (dùng cho view tuần)
+function prefetchWeek(weekStart){
   for(let i=0;i<7;i++){
     const d=new Date(weekStart+'T00:00:00');d.setDate(d.getDate()+i);
-    const ds=d.toISOString().slice(0,10);
-    const all=rsMockSessions(ds).filter(s=>s.room===roomId);
-    // Thêm Cho thuê: PNE theo room
-    if(roomId==='P.22'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:15});
-    if(roomId==='P.14'&&i>=1&&i<=4)all.push({room:roomId,code:'Cho thuê: PNE (TỔ CHỨC THI OESD ĐỢT THÁNG 5)',teacher:'',start:'08:00',end:'21:00',hv:0,cap:20});
-    // Thêm venue blocks
-    _venueBlocks.filter(b=>b.date===ds&&b.room===roomId).forEach(vb=>{if(!all.find(s=>s._vsId===vb._vsId))all.push(vb);});
-    sessions[ds]=all;
+    fetchRoomSchedule(d.toISOString().slice(0,10));
   }
-  return sessions;
 }
 function rsTimeToMin(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
 const RS_START=7*60;// 07:00
@@ -1635,8 +1624,11 @@ function renderRoomSchedule(){
   function renderTheoNgay(){
     const dateStr=ST.rs.date;
     const d=new Date(dateStr+'T00:00:00');
-    const sessions=rsMockSessions(dateStr);
-    // Merge venue blocks from localStorage
+    // Lấy từ cache; nếu chưa có → fetch ngầm, render trống trước
+    const isLoading=!_rsScheduleCache.hasOwnProperty(dateStr);
+    if(isLoading)fetchRoomSchedule(dateStr);
+    const sessions=[...(_rsScheduleCache[dateStr]||[])];
+    // Merge venue blocks từ localStorage (lịch PNE tự đặt)
     const _venueBlocks=JSON.parse(localStorage.getItem('pne_venue_blocks')||'[]');
     _venueBlocks.filter(b=>b.date===dateStr).forEach(vb=>{if(!sessions.find(s=>s._vsId===vb._vsId))sessions.push(vb);});
     const dateLabel=d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
@@ -1679,8 +1671,9 @@ function renderRoomSchedule(){
         <button class="rs-today-btn" onclick="ST.rs.date='${todayStr}';renderRoomSchedule()">Hôm nay</button>
         <span style="font-size:12px;color:var(--tx3);margin-left:4px">${dateLabel}</span>
         <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-          <button class="rs-today-btn" onclick="renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
+          <button class="rs-today-btn" onclick="_rsScheduleCache={};renderRoomSchedule()" title="Làm mới lịch phòng" style="display:flex;align-items:center;gap:4px">🔄 Làm mới</button>
           <div style="${_roomsFromAPI?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${_roomsFromAPI?'✅ '+RS_ROOMS.length+' phòng (live)':'🏢 '+RS_ROOMS.length+' phòng'}</div>
+          <div style="${isLoading?'background:#fef9c3;border:1px solid #fde047;color:#92400e':_rsScheduleCache[dateStr]&&_rsScheduleCache[dateStr].length?'background:#dcfce7;border:1px solid #86efac;color:#166534':'background:#f1f5f9;border:1px solid #cbd5e1;color:#64748b'};font-size:11px;font-weight:600;padding:4px 10px;border-radius:5px">${isLoading?'⏳ Đang tải lịch...':_rsScheduleCache[dateStr]&&_rsScheduleCache[dateStr].length?'📡 Lịch live ('+_rsScheduleCache[dateStr].length+' buổi)':'📭 Không có lịch'}</div>
         </div>
       </div>
       <div class="rs-grid-wrap">
@@ -1718,7 +1711,18 @@ function renderRoomSchedule(){
     const weDateStr=weDate.toISOString().slice(0,10);
     const wLabel=`${wsDate.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})} → ${weDate.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
 
-    const weekSessions=rsMockWeekSessions(roomId,weekStart);
+    // Prefetch 7 ngày song song nếu chưa có cache
+    prefetchWeek(weekStart);
+    // Build weekSessions từ cache (ngày chưa load → [])
+    const _venueBlocksW=JSON.parse(localStorage.getItem('pne_venue_blocks')||'[]');
+    const weekSessions={};
+    for(let i=0;i<7;i++){
+      const _d=new Date(weekStart+'T00:00:00');_d.setDate(_d.getDate()+i);
+      const ds=_d.toISOString().slice(0,10);
+      const all=[...(_rsScheduleCache[ds]||[])].filter(s=>s.room===roomId);
+      _venueBlocksW.filter(b=>b.date===ds&&b.room===roomId).forEach(vb=>{if(!all.find(s=>s._vsId===vb._vsId))all.push(vb);});
+      weekSessions[ds]=all;
+    }
     const days=[];
     for(let i=0;i<7;i++){
       const d=new Date(weekStart+'T00:00:00');d.setDate(d.getDate()+i);
