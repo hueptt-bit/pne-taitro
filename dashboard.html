@@ -2812,8 +2812,13 @@ function removeVenueSchedule(idx){
 function updateVenueSchedule(idx, field, value){
   if(!_venueScheduleDraft[idx])return;
   _venueScheduleDraft[idx][field]=value;
-  // Khi chọn ngày → prefetch lịch phòng để filter dropdown available
-  if(field==='date'&&value)fetchRoomSchedule(value);
+  if(field==='date'){
+    // Chỉ fetch khi năm hợp lệ (≥ 2020) — tránh gọi API với năm rác
+    const yr=parseInt((value||'').split('-')[0]);
+    if(yr>=2020)fetchRoomSchedule(value);
+    // renderVenueSchedules() được gọi bởi onblur, không gọi ở đây để tránh mất focus
+    return;
+  }
   if(field==='suc_chua'||field==='ca'){
     const vs=_venueScheduleDraft[idx];
     const sc=parseInt(vs.suc_chua)||0;
@@ -2861,11 +2866,12 @@ function renderVenueSchedules(){
     const _bookedRooms=vs.date&&_rsScheduleCache.hasOwnProperty(vs.date)
       ?new Set((_rsScheduleCache[vs.date]||[]).map(s=>s.room))
       :null; // null = chưa có data → hiện tất cả
-    const _availableRooms=RS_ROOMS.filter(r=>!_bookedRooms||!_bookedRooms.has(r.id));
+    const _availableRooms=RS_ROOMS.filter(r=>
+      (!_bookedRooms||!_bookedRooms.has(r.id))&&(sc===0||r.cap>=sc)
+    );
     const _loadingDate=vs.date&&_rsLoadingDates.has(vs.date);
     const roomOpts=_availableRooms.map(r=>{
-      const fits=sc===0||r.cap>=sc;
-      return`<option value="${r.id}" ${vs.phong===r.id?'selected':''} ${!fits?'style="color:#9ca3af"':''}>${r.label} (${r.cap}ng)${!fits?' ⚠️':''}</option>`;
+      return`<option value="${r.id}" ${vs.phong===r.id?'selected':''}>${r.label} (${r.cap}ng)</option>`;
     }).join('');
     const gia=vs.gia?`<span style="font-weight:700;color:#059669">${fmtMoney(vs.gia)}</span>`:'—';
     const isConfirmed=vs.confirmed;
@@ -2874,7 +2880,7 @@ function renderVenueSchedules(){
       ${isConfirmed?'<div style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#14532d;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:8px">✅ Đã xác nhận phòng</div>':''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Ngày sử dụng</label>
-          <input type="date" value="${vs.date||''}" onchange="updateVenueSchedule(${i},'date',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
+          <input type="date" value="${vs.date||''}" onblur="updateVenueSchedule(${i},'date',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
         <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Ca sử dụng</label>
           <select onchange="updateVenueSchedule(${i},'ca',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
             ${CA_OPTS.map(o=>`<option value="${o.v}" ${vs.ca===o.v?'selected':''}>${o.l}</option>`).join('')}
