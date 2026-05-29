@@ -1480,23 +1480,29 @@ let RS_ROOMS=[
   {id:'P.210A',label:'P.210A',cap:4,apiId:64},{id:'P.310',label:'P.310',cap:4,apiId:57},
   {id:'P.310A',label:'P.310A',cap:3,apiId:66},
 ];
-let _roomsLoaded=true,_roomsFetching=false,_roomsFromAPI=false; // hardcoded 57 phòng, fetchRooms override khi CORS ok
+let _roomsLoaded=false,_roomsFetching=false,_roomsFromAPI=false; // false → fetchRooms() tự chạy khi mở tab lịch phòng
 async function fetchRooms(){
   if(_roomsLoaded||_roomsFetching)return;
+  if(!GAS_URL){_roomsLoaded=true;return;} // không có GAS → dùng hardcoded fallback
   _roomsFetching=true;
   try{
-    const res=await fetch('https://api.phuongnameducation.com/_/sponsorship/api/rooms',{headers:{'X-Api-Key':'uz9a3wdn44U1EGTv'}});
+    const res=await fetch(GAS_URL+'?action=getRooms');
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
-    RS_ROOMS=data
-      .filter(r=>r.label&&r.label!=='0')
-      .map(r=>({id:'P.'+r.label,label:'P.'+r.label,cap:r.cap,apiId:r.id}))
+    if(!data.ok||!Array.isArray(data.rooms))throw new Error(data.error||'no rooms data');
+    RS_ROOMS=data.rooms
+      .filter(r=>r.label&&String(r.label)!=='0')
+      .map(r=>{
+        const lbl=String(r.label);
+        const id=lbl.startsWith('P.')?lbl:'P.'+lbl;
+        return{id,label:id,cap:r.cap||0,apiId:r.id};
+      })
       .sort((a,b)=>a.label.localeCompare(b.label,undefined,{numeric:true}));
     _roomsLoaded=true;_roomsFromAPI=true;
     renderRoomSchedule();
   }catch(e){
-    console.warn('fetchRooms error (CORS?):',e);
-    _roomsLoaded=true;_roomsFromAPI=false; // dùng fallback mock
+    console.warn('fetchRooms error:',e);
+    _roomsLoaded=true;_roomsFromAPI=false; // dùng hardcoded fallback
   }finally{
     _roomsFetching=false;
   }
@@ -1539,6 +1545,9 @@ async function fetchRoomSchedule(dateStr){
     _rsLoadingDates.delete(dateStr);
     // Re-render nếu đang nhìn tab lịch phòng
     if(ST.view==='room_schedule')renderRoomSchedule();
+    // Cập nhật dropdown phòng trong form venue nếu đang mở
+    const _vsEl=document.getElementById('venue_schedule_list');
+    if(_vsEl&&_vsEl.childElementCount)renderVenueSchedules();
   }
 }
 
@@ -1792,7 +1801,14 @@ function renderRoomSchedule(){
       </div>`;
   }
 
+  // Lưu scroll position trước khi replace innerHTML (tránh giật về đầu)
+  const _rsOldWrap=document.querySelector('.rs-grid-wrap');
+  const _rsSL=_rsOldWrap?_rsOldWrap.scrollLeft:0;
+  const _rsST=_rsOldWrap?_rsOldWrap.scrollTop:0;
   main.innerHTML=`<style>${gridCss}</style><div class="rs-wrap">${tab==='theo_ngay'?renderTheoNgay():renderTheoPhong()}</div>`;
+  // Khôi phục scroll sau khi render xong
+  const _rsNewWrap=document.querySelector('.rs-grid-wrap');
+  if(_rsNewWrap){_rsNewWrap.scrollLeft=_rsSL;_rsNewWrap.scrollTop=_rsST;}
 }
 
 // ── OVERVIEW ──
@@ -2796,6 +2812,8 @@ function removeVenueSchedule(idx){
 function updateVenueSchedule(idx, field, value){
   if(!_venueScheduleDraft[idx])return;
   _venueScheduleDraft[idx][field]=value;
+  // Khi chọn ngày → prefetch lịch phòng để filter dropdown available
+  if(field==='date'&&value)fetchRoomSchedule(value);
   if(field==='suc_chua'||field==='ca'){
     const vs=_venueScheduleDraft[idx];
     const sc=parseInt(vs.suc_chua)||0;
@@ -2839,9 +2857,13 @@ function renderVenueSchedules(){
   ];
   cont.innerHTML=_venueScheduleDraft.map((vs,i)=>{
     const sc=parseInt(vs.suc_chua)||0;
-    // Suggest rooms that fit capacity
-    const suggestedRooms=sc>0?RS_ROOMS.filter(r=>r.cap>=sc):RS_ROOMS;
-    const roomOpts=RS_ROOMS.map(r=>{
+    // Lọc phòng: chỉ hiện phòng khả dụng (không có lịch) vào ngày đã chọn
+    const _bookedRooms=vs.date&&_rsScheduleCache.hasOwnProperty(vs.date)
+      ?new Set((_rsScheduleCache[vs.date]||[]).map(s=>s.room))
+      :null; // null = chưa có data → hiện tất cả
+    const _availableRooms=RS_ROOMS.filter(r=>!_bookedRooms||!_bookedRooms.has(r.id));
+    const _loadingDate=vs.date&&_rsLoadingDates.has(vs.date);
+    const roomOpts=_availableRooms.map(r=>{
       const fits=sc===0||r.cap>=sc;
       return`<option value="${r.id}" ${vs.phong===r.id?'selected':''} ${!fits?'style="color:#9ca3af"':''}>${r.label} (${r.cap}ng)${!fits?' ⚠️':''}</option>`;
     }).join('');
@@ -2863,7 +2885,7 @@ function renderVenueSchedules(){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Sức chứa cần (người)</label>
           <input type="number" min="1" value="${vs.suc_chua||''}" placeholder="VD: 30" oninput="updateVenueSchedule(${i},'suc_chua',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"></div>
-        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Phòng được chọn${sc>0?` <span style="font-size:10px;color:#059669">(≥${sc}ng gợi ý)</span>`:''}</label>
+        <div><label style="font-size:11px;color:#6b7280;font-weight:600;display:block;margin-bottom:3px">Phòng được chọn${sc>0?` <span style="font-size:10px;color:#059669">(≥${sc}ng)</span>`:''}${_loadingDate?' <span style="font-size:10px;color:#f59e0b">⏳ đang tải...</span>':vs.date&&_bookedRooms?' <span style="font-size:10px;color:#059669">('+_availableRooms.length+' phòng trống)</span>':''}</label>
           <select onchange="updateVenueSchedule(${i},'phong',this.value)" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px">
             <option value="">-- Chọn phòng --</option>${roomOpts}
           </select></div>

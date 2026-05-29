@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CONFIG = {
-  TG_TOKEN:          '8883609953:AAEe88AtNr808jQhJ0gZM8ntX7ShSVXfHTI',
+  TG_TOKEN:          PropertiesService.getScriptProperties().getProperty('TG_TOKEN') || '',
   TG_CHAT_ID:        '-5110564753',          // Group chính (nhận hồ sơ mới, liên hệ...)
   TG_EXEC_CHAT_ID:   '-5158615383',           // Group thực thi [Tài trợ] Trả quyền lợi
   TG_VOUCHER_CHAT_ID:'-5285106597',           // Group in voucher (nhận yêu cầu in + xác nhận)
@@ -15,6 +15,9 @@ const CONFIG = {
   DASHBOARD_URL:     'https://hueptt-bit.github.io/pne-taitro/dashboard.html',
   GMAIL_QUERY:       '-label:pne-processed newer_than:3d',
   GMAIL_LABEL:       'pne-processed',
+  // ── CRM API (proxy lịch phòng — key lưu trong Script Properties) ──
+  CRM_API_KEY:       PropertiesService.getScriptProperties().getProperty('CRM_API_KEY') || '',
+  CRM_BASE_URL:      'https://api.phuongnameducation.com/_/sponsorship',
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -218,7 +221,7 @@ function recordToRow(r) {
       case '_approval_json':         return r.approval ? JSON.stringify(r.approval) : '';
       case '_mapsReview_json':       return r.mapsReview && r.mapsReview.qty > 0 ? JSON.stringify(r.mapsReview) : '';
       case '_roomSponsorships_json': return r.roomSponsorships && r.roomSponsorships.length ? JSON.stringify(r.roomSponsorships) : '';
-      case 'updatedAt':              return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      case 'updatedAt':              return r.updatedAt || new Date().toISOString();
       default:                  return r[c.key] !== undefined ? r[c.key] : '';
     }
   });
@@ -267,7 +270,7 @@ function rowToRecord(row) {
         if (val) try { r.roomSponsorships = JSON.parse(val); } catch(e) { r.roomSponsorships = []; }
         else r.roomSponsorships = [];
         break;
-      case 'updatedAt': break; // metadata — bỏ qua
+      case 'updatedAt': if (val && val !== '') r.updatedAt = String(val); break; // ISO string từ sheet
       default:
         if (val !== '' && val !== null && val !== undefined) r[c.key] = String(val);
         else if (r[c.key] === undefined) r[c.key] = '';
@@ -340,6 +343,7 @@ function updateRecordField(id, field, value) {
   const row = sheet.getRange(rowIdx, 1, 1, COLS.length).getValues()[0];
   const record = rowToRecord(row);
   record[field] = value;
+  record.updatedAt = new Date().toISOString(); // Stamp để auto-sync dashboard nhận biết thay đổi
   sheet.getRange(rowIdx, 1, 1, COLS.length).setValues([recordToRow(record)]);
   return record;
 }
@@ -380,6 +384,13 @@ function doGet(e) {
   }
   if (action === 'ping') {
     return jsonResponse({ ok: true, time: new Date().toISOString() });
+  }
+  if (action === 'getRoomSchedule') {
+    const date = (e.parameter && e.parameter.date) || '';
+    return jsonResponse(proxyRoomSchedule(date));
+  }
+  if (action === 'getRooms') {
+    return jsonResponse(proxyRooms());
   }
   if (action === 'login') {
     const username = String((e.parameter && e.parameter.username) || '').trim().toLowerCase();
@@ -494,6 +505,72 @@ function doPost(e) {
   }
 
   return jsonResponse({ ok: false, error: 'Unknown POST action: ' + action });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRM PROXY — Gọi CRM API thay cho dashboard (ẩn API key)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Proxy GET /api/room-schedule?date=YYYY-MM-DD từ CRM.
+ * Dashboard gọi: GAS_URL?action=getRoomSchedule&date=2026-05-27
+ * GAS gọi CRM với X-Api-Key, trả kết quả về dashboard.
+ * Map field: title → code (để khớp với blockHtml hiện tại)
+ */
+function proxyRoomSchedule(date) {
+  if (!date) return { ok: false, error: 'Missing date param' };
+  const key = CONFIG.CRM_API_KEY;
+  if (!key) return { ok: false, error: 'CRM_API_KEY chưa được cấu hình trong Script Properties. Chạy setupCrmApiKey() để cài đặt.' };
+  try {
+    const res = UrlFetchApp.fetch(
+      CONFIG.CRM_BASE_URL + '/api/room-schedule?date=' + encodeURIComponent(date),
+      { headers: { 'X-Api-Key': key }, muteHttpExceptions: true }
+    );
+    const code = res.getResponseCode();
+    if (code !== 200) return { ok: false, error: 'CRM trả HTTP ' + code };
+    const data = JSON.parse(res.getContentText());
+    // Chuẩn hoá về format dashboard đang dùng: { room, code, teacher, start, end, hv, cap }
+    const sessions = Array.isArray(data) ? data.map(function(s) {
+      // Normalize room ID: đảm bảo luôn có prefix "P." để khớp với RS_ROOMS trong dashboard
+      const rawRoom = String(s.room || '');
+      const roomId  = rawRoom.startsWith('P.') ? rawRoom : (rawRoom ? 'P.' + rawRoom : '');
+      return {
+        room:    roomId,
+        code:    s.title   || rawRoom || '',  // CRM trả "title", dashboard dùng "code"
+        teacher: s.teacher || '',
+        start:   s.start   || '00:00',
+        end:     s.end     || '00:00',
+        hv:      s.hv      || 0,
+        cap:     s.cap     || 0,
+      };
+    }) : [];
+    return { ok: true, sessions: sessions };
+  } catch(e) {
+    Logger.log('proxyRoomSchedule error: ' + e.message);
+    return { ok: false, error: 'proxyRoomSchedule: ' + e.message };
+  }
+}
+
+/**
+ * Proxy GET /api/rooms từ CRM — trả danh sách phòng với sức chứa đúng.
+ * Dashboard gọi: GAS_URL?action=getRooms
+ */
+function proxyRooms() {
+  const key = CONFIG.CRM_API_KEY;
+  if (!key) return { ok: false, error: 'CRM_API_KEY chưa được cấu hình' };
+  try {
+    const res = UrlFetchApp.fetch(
+      CONFIG.CRM_BASE_URL + '/api/rooms',
+      { headers: { 'X-Api-Key': key }, muteHttpExceptions: true }
+    );
+    const code = res.getResponseCode();
+    if (code !== 200) return { ok: false, error: 'CRM trả HTTP ' + code };
+    const data = JSON.parse(res.getContentText());
+    return { ok: true, rooms: Array.isArray(data) ? data : [] };
+  } catch(e) {
+    Logger.log('proxyRooms error: ' + e.message);
+    return { ok: false, error: 'proxyRooms: ' + e.message };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1020,16 +1097,14 @@ function handleTelegramCallback(cq) {
     updateRecordField(recordId, 'voucher_status', 'da_in');
     tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Đã xác nhận!' });
     const userName = (cq.from && cq.from.first_name) || 'ai đó';
-    // Xoá nút inline keyboard (tránh xung đột parse_mode giữa Markdown và HTML)
-    tgCall('editMessageReplyMarkup', {
-      chat_id: chatId, message_id: msgId,
-      reply_markup: { inline_keyboard: [] }
-    });
-    // Gửi tin xác nhận mới
-    tgCall('sendMessage', {
+    // Chỉnh sửa tin gốc: thêm xác nhận vào cuối + xoá nút (không gửi tin mới)
+    // cq.message.text là plain text (Telegram đã xử lý Markdown khi gửi) → không cần parse_mode
+    const originalText = cq.message.text || '';
+    tgCall('editMessageText', {
       chat_id: chatId,
-      text: `✅ *Đã in* — xác nhận bởi ${userName}\nHồ sơ: \`${recordId}\``,
-      parse_mode: 'Markdown',
+      message_id: msgId,
+      text: originalText + '\n\n✅ Đã in — xác nhận bởi ' + userName,
+      reply_markup: { inline_keyboard: [] },
     });
     return;
   }
@@ -1127,7 +1202,7 @@ function jsonResponse(data) {
  *   voucher_print_qty, voucher_print_deadline, neg_items }
  */
 function handleVoucherPrintNotify(payload) {
-  const { id, org, event, school, mavoucher, voucher_print_qty, voucher_print_deadline, neg_items } = payload;
+  const { id, org, event, school, mavoucher, hanvoucher, voucher_print_qty, voucher_print_deadline, neg_items } = payload;
 
   // Rate-limit: không gửi lại trong vòng 5 phút (tránh spam khi dashboard gửi trùng)
   const cache = CacheService.getScriptCache();
@@ -1135,16 +1210,22 @@ function handleVoucherPrintNotify(payload) {
   if (cache.get(cacheKey)) return { ok: true, skipped: true };
   cache.put(cacheKey, '1', 300); // 5 phút
 
-  // Build breakdown chi tiết voucher theo loại
+  // Build breakdown: "Voucher 100%, SL: 2 cái"
+  // i.type hoặc i.label — dashboard có thể gửi theo 1 trong 2 field
   const breakdown = (neg_items || [])
     .filter(i => !i.isCash && (+i.qty || 0) > 0)
-    .map(i => `  • ${i.qty}× ${VOUCHER_TYPE_LABELS[i.type] || i.type}`)
+    .map(i => {
+      const key = i.type || i.label || '?';
+      return `Voucher ${key}, SL: ${i.qty} cái`;
+    })
     .join('\n');
 
-  // Format deadline dd/mm/yyyy
-  const dlFormatted = voucher_print_deadline
-    ? voucher_print_deadline.split('-').reverse().join('/')
-    : '(chưa xác định)';
+  // Format ngày dd/mm/yyyy từ ISO yyyy-MM-dd
+  function fmtDate(s) {
+    if (!s) return null;
+    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(s);
+  }
 
   // Format dải mã: prefix.01 → prefix.NN
   const vPrefix = (mavoucher || '').replace(/\.\d{2}$/, '');
@@ -1155,13 +1236,13 @@ function handleVoucherPrintNotify(payload) {
 
   const msg = [
     '🎟️ *YÊU CẦU IN VOUCHER*',
-    '',
     `📌 *Chương trình:* ${org} — ${event}`,
     school ? `🏫 *Trường:* ${school}` : null,
     `🆔 *Mã:* ${codeRange}`,
     `📦 *Tổng:* ${qty} voucher`,
-    breakdown ? `\n*Chi tiết:*\n${breakdown}` : null,
-    `\n⏰ *Deadline in:* ${dlFormatted}`,
+    breakdown ? `*Chi tiết:*\n${breakdown}` : null,
+    hanvoucher ? `📅 *Hạn voucher:* ${fmtDate(hanvoucher) || hanvoucher}` : null,
+    `⏰ *Deadline in:* ${fmtDate(voucher_print_deadline) || '(chưa xác định)'}`,
   ].filter(Boolean).join('\n');
 
   const res = tgCall('sendMessage', {
@@ -1190,6 +1271,12 @@ function setupSheets() {
   getSheet();        // tạo sheet Records với headers
   getDeletedSheet(); // tạo sheet Deleted
   Logger.log('✅ Đã tạo/kiểm tra sheets: Records + Deleted');
+}
+
+/** Bước 1b — Lưu CRM API key vào Script Properties (chạy 1 lần) */
+function setupCrmApiKey() {
+  PropertiesService.getScriptProperties().setProperty('CRM_API_KEY', 'uz9a3wdn44U1EGTv');
+  Logger.log('✅ CRM_API_KEY đã được lưu vào Script Properties');
 }
 
 /** Bước 2 — Deploy Web App → lấy URL /exec → dán vào CONFIG.WEB_APP_URL, rồi chạy hàm này */
