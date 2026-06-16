@@ -1331,6 +1331,12 @@ function setAccent(){
 // ══ RENDER ══
 function render(){
   setAccent();renderSidebar();
+  // ── Lưu vị trí cuộn trước khi re-render → tránh "giật về đầu" khi auto-sync ──
+  const _cEl=document.getElementById('content');
+  const _cST=_cEl?_cEl.scrollTop:0;
+  const _board=_cEl?_cEl.querySelector('.kb-board'):null;
+  const _boardSL=_board?_board.scrollLeft:0;
+  const _colTops=_board?[..._board.querySelectorAll('.kb-cards')].map(e=>e.scrollTop):[];
   if(ST.view==='overview')renderOverview();
   else if(ST.view==='kanban')renderKanban();
   else if(ST.view==='list')renderList();
@@ -1338,6 +1344,17 @@ function render(){
   else if(ST.view==='stats')renderStats();
   else if(ST.view==='voucher_board')renderVoucherBoard();
   else if(ST.view==='log')renderLog();
+  // ── Khôi phục vị trí cuộn sau khi DOM dựng lại ──
+  requestAnimationFrame(()=>{
+    const c2=document.getElementById('content'); if(!c2)return;
+    if(_cST)c2.scrollTop=_cST;
+    const b2=c2.querySelector('.kb-board');
+    if(b2){
+      if(_boardSL)b2.scrollLeft=_boardSL;
+      const cols=[...b2.querySelectorAll('.kb-cards')];
+      cols.forEach((e,i)=>{ if(_colTops[i])e.scrollTop=_colTops[i]; });
+    }
+  });
 }
 function needsApproval(r){return r.stage!=='executing'&&r.stage!=='done'&&offerTotal(r)>0&&(!r.approval||!r.approval.status||r.approval.status==='pending');}
 function approveOffer(id,status){
