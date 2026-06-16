@@ -4907,7 +4907,8 @@ function _autoSyncPull(){
         else{
           const tGas=gasRec.updatedAt?new Date(gasRec.updatedAt).getTime():0;
           const tLocal=localRec.updatedAt?new Date(localRec.updatedAt).getTime():0;
-          if(tGas>tLocal || (tGas>0&&tLocal===0) || (tGas===tLocal&&tGas>0)){
+          // Chỉ gộp khi GAS thực sự mới hơn (KHÔNG coi timestamp bằng nhau là cập nhật → tránh render() lặp mỗi 15s gây giật màn hình)
+          if(tGas>tLocal || (tGas>0&&tLocal===0)){
             const merged={...localRec,...gasRec};
             _LOCAL_FIELDS.forEach(f=>{
               const gv=gasRec[f];const lv=localRec[f];
@@ -4915,7 +4916,10 @@ function _autoSyncPull(){
               const lh=lv&&(Array.isArray(lv)?lv.length>0:String(lv).trim()!=='');
               if(ge&&lh) merged[f]=lv;
             });
-            localMap.set(gasRec.id,merged); updatedCount++;
+            // Chốt cuối: chỉ tính là cập nhật khi nội dung thực sự khác (giống syncFromGAS) → không render() thừa
+            if(JSON.stringify(localRec)!==JSON.stringify(merged)){
+              localMap.set(gasRec.id,merged); updatedCount++;
+            }
           }
         }
       });
