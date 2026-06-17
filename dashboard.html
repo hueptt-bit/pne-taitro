@@ -1444,7 +1444,7 @@ function renderSidebar(){
           <span class="sb-stage-count">${cnt[st.id]||0}</span>
         </div>`).join('')}
       ${cnt['rejected']>0?`
-        <div class="sb-stage${ST.showRejected&&ST.view==='kanban'?` active`:''}" onclick="ST.showRejected=true;ST.view='kanban';ST.stageFilter=null;ST.approvalFilter=false;ST.voucherFilter=false;render()" style="opacity:.8">
+        <div class="sb-stage${ST.showRejected&&ST.stageFilter==='rejected'?` active`:''}" onclick="ST.showRejected=true;ST.stageFilter='rejected';ST.approvalFilter=false;ST.voucherFilter=false;ST.view='list';render()" style="opacity:.8">
           <span class="sb-stage-dot" style="background:#dc2626"></span>
           <span class="sb-stage-label" style="color:#dc2626">Không tài trợ</span>
           <span class="sb-stage-count">${cnt['rejected']}</span>
@@ -1936,9 +1936,7 @@ function renderKanban(){
   const rejCount=rejectedList.length;
   document.getElementById('content').innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <button onclick="ST.showRejected=!ST.showRejected;render()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;border:1px solid ${ST.showRejected?'#dc2626':'var(--border)'};background:${ST.showRejected?'#fee2e2':'#f8fafc'};color:${ST.showRejected?'#dc2626':'#64748b'};font-size:12px;font-weight:600;cursor:pointer">
-        ❌ Không tài trợ ${rejCount>0?`<span style="background:${ST.showRejected?'#dc2626':'#94a3b8'};color:#fff;border-radius:10px;padding:1px 6px;font-size:11px">${rejCount}</span>`:''}
-      </button>
+      ${rejCount>0?`<button onclick="ST.showRejected=true;ST.stageFilter='rejected';ST.approvalFilter=false;ST.voucherFilter=false;ST.view='list';render()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;border:1px solid #dc2626;background:#fee2e2;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer">❌ Không tài trợ <span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px">${rejCount}</span></button>`:''}
     </div>
     <div class="kb-board">
       ${STAGES.map(st=>`
