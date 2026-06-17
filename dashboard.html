@@ -932,6 +932,7 @@ const STAGES=[
   {id:'executing',   label:'Thực thi',      color:'#16a34a', desc:'Đã ký, đang thực hiện'},
   {id:'done',        label:'Hoàn thành',    color:'#64748b', desc:'Kết thúc, đã báo cáo'},
 ];
+const REJECTED_STAGE={id:'rejected',label:'Không tài trợ',color:'#dc2626',desc:'Đã từ chối / không tài trợ'};
 const CATS=['CLB','Hội SV','Ban học thuật','Sự kiện ngoại trường','Doanh nghiệp','Khác'];
 const YEARS=['2024','2025','2026','2027'];
 
@@ -1078,7 +1079,7 @@ function pushToGAS(records){
 }
 
 // ══ STATE ══
-let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,voucherFilter:false,voucherBoardStatus:null,expandedRows:new Set(),selectedIds:new Set(),rs:{tab:'theo_ngay',date:new Date().toISOString().slice(0,10),room:'P.22',weekStart:''}};
+let ST={track:'voucher',view:'overview',year:String(new Date().getFullYear()),search:'',selId:null,sortCol:'',sortDir:1,stageFilter:null,approvalFilter:false,voucherFilter:false,voucherBoardStatus:null,showRejected:false,expandedRows:new Set(),selectedIds:new Set(),rs:{tab:'theo_ngay',date:new Date().toISOString().slice(0,10),room:'P.22',weekStart:''}};
 let _charts={};
 let _calcId=null; // record being calculated
 let _calcDraft=[]; // current calc quantities [{type, qty, cashVal}]
@@ -1311,7 +1312,7 @@ function renderVoucherBreakdown(negItems){
 function cycleLienhe(id,e){e.stopPropagation();const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;const cur=r.lienhe_status||'moi';const idx=LIENHE_CYCLE.indexOf(cur);r.lienhe_status=LIENHE_CYCLE[(idx+1)%LIENHE_CYCLE.length];r.updatedAt=new Date().toISOString();saveAll(a);if(ST.view==='kanban')renderKanban();else if(ST.view==='list')renderList();if(ST.selId===id)renderPanel();}
 function fmtMoney(n){if(!n||n==0)return'—';if(n>=1e9)return(n/1e9).toFixed(1).replace('.0','')+'B';if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n+'';}
 function fmtMoneyFull(n){if(!n||n==0)return'0đ';return n.toLocaleString('vi-VN')+'đ';}
-function stageMeta(id){return STAGES.find(s=>s.id===id)||STAGES[0];}
+function stageMeta(id){if(id==='rejected')return REJECTED_STAGE;return STAGES.find(s=>s.id===id)||STAGES[0];}
 function benefitProgress(r){if(!r.benefits||!r.benefits.length)return{done:0,total:0,pct:0};const d=r.benefits.filter(b=>b.done).length;return{done:d,total:r.benefits.length,pct:Math.round(d/r.benefits.length*100)};}
 function daysUntil(ds){if(!ds)return null;const d=new Date(ds),t=new Date();t.setHours(0,0,0,0);d.setHours(0,0,0,0);return Math.round((d-t)/864e5);}
 function fmtDate(ds){if(!ds)return null;const iso=String(ds).match(/(\d{4})-(\d{2})-(\d{2})/);if(iso)return`${iso[3]}/${iso[2]}/${iso[1]}`;try{const d=new Date(ds);if(!isNaN(d))return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;}catch{}return ds;}
@@ -1391,6 +1392,8 @@ function approveOffer(id,status){
 }
 function filtered(){
   let a=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
+  // Mặc định ẩn hồ sơ không tài trợ khỏi pipeline chính (trừ khi đang filter riêng)
+  if(!ST.showRejected&&ST.stageFilter!=='rejected')a=a.filter(r=>r.stage!=='rejected');
   if(ST.approvalFilter)a=a.filter(r=>needsApproval(r));
   else if(ST.voucherFilter)a=a.filter(r=>r.mavoucher||r.voucher_status);
   else if(ST.stageFilter)a=a.filter(r=>r.stage===ST.stageFilter);
@@ -1404,6 +1407,7 @@ function filtered(){
 function renderSidebar(){
   const all=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
   const cnt={};STAGES.forEach(st=>{cnt[st.id]=all.filter(r=>r.stage===st.id).length;});
+  cnt['rejected']=all.filter(r=>r.stage==='rejected').length;
   const pendingCnt=all.filter(r=>needsApproval(r)).length;
   const tm=trackMeta();const _au=getAuthUser();const navs=[{id:'overview',label:'Tổng quan',ico:'home'},{id:'kanban',label:'Kanban',ico:'kanban'},{id:'list',label:'Danh sách',ico:'list'},{id:'voucher_board',label:'Bảng Voucher',ico:'voucher'},{id:'stats',label:'Thống kê',ico:'chart'},{id:'room_schedule',label:'Lịch phòng',ico:'room'}];if(_au&&_au.username==='hueptt')navs.push({id:'log',label:'Nhật ký',ico:'log'});
   document.getElementById('sb').innerHTML=`
@@ -1439,6 +1443,12 @@ function renderSidebar(){
           <span class="sb-stage-label">${st.label}</span>
           <span class="sb-stage-count">${cnt[st.id]||0}</span>
         </div>`).join('')}
+      ${cnt['rejected']>0?`
+        <div class="sb-stage${ST.stageFilter==='rejected'?` active`:''}" onclick="ST.stageFilter='rejected';ST.showRejected=true;setView('kanban')" style="opacity:.8">
+          <span class="sb-stage-dot" style="background:#dc2626"></span>
+          <span class="sb-stage-label" style="color:#dc2626">Không tài trợ</span>
+          <span class="sb-stage-count">${cnt['rejected']}</span>
+        </div>`:''}
     </div>
     <div class="sb-bottom">
       <div class="sb-section" style="padding:0 4px 6px;font-size:10px">Năm</div>
@@ -1920,7 +1930,16 @@ function filterToList(sid){ST.stageFilter=sid;ST.view='list';render();}
 // ── KANBAN ──
 function renderKanban(){
   const sp=filtered();const by={};STAGES.forEach(st=>{by[st.id]=sp.filter(r=>r.stage===st.id);});const tm=trackMeta();
+  // Hồ sơ không tài trợ — luôn load trực tiếp từ localStorage (không qua filtered vì bị ẩn)
+  const allRaw=loadAll().filter(r=>String(r.year)===String(ST.year)&&r.track===ST.track);
+  const rejectedList=allRaw.filter(r=>r.stage==='rejected');
+  const rejCount=rejectedList.length;
   document.getElementById('content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="ST.showRejected=!ST.showRejected;render()" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;border:1px solid ${ST.showRejected?'#dc2626':'var(--border)'};background:${ST.showRejected?'#fee2e2':'#f8fafc'};color:${ST.showRejected?'#dc2626':'#64748b'};font-size:12px;font-weight:600;cursor:pointer">
+        ❌ Không tài trợ ${rejCount>0?`<span style="background:${ST.showRejected?'#dc2626':'#94a3b8'};color:#fff;border-radius:10px;padding:1px 6px;font-size:11px">${rejCount}</span>`:''}
+      </button>
+    </div>
     <div class="kb-board">
       ${STAGES.map(st=>`
         <div class="kb-col">
@@ -1949,7 +1968,10 @@ function renderKanban(){
                     ${LIENHE_SHOW_STAGES.has(r.stage)?(()=>{const li=lienheInfo(r.lienhe_status||r.lienhe||'moi');return`<button onclick="cycleLienhe('${r.id}',event)" title="Click để đổi trạng thái liên hệ" style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;background:${li.bg};color:${li.c};border:1px solid ${li.c}44;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s">${li.icon} ${li.t}</button>`;})():''}
                     ${(()=>{const uc=daysUncontacted(r);return uc?`<div style="margin-top:4px;display:inline-flex;align-items:center;gap:3px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:2px 7px;font-size:10.5px;font-weight:700">⏰ Chưa liên hệ ${uc} ngày</div>`:'';})()}
                   </div>
-                  ${hasNext?`<button onclick="advanceStage('${r.id}',event)" title="Chuyển sang: ${STAGES[stIdx+1].label}" style="flex-shrink:0;width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#f8fafc;color:#475569;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='${STAGES[stIdx+1].color}';this.style.color='#fff';this.style.borderColor='${STAGES[stIdx+1].color}'" onmouseout="this.style.background='#f8fafc';this.style.color='#475569';this.style.borderColor='var(--border)'">→</button>`:''}
+                  <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+                    ${hasNext?`<button onclick="advanceStage('${r.id}',event)" title="Chuyển sang: ${STAGES[stIdx+1].label}" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#f8fafc;color:#475569;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='${STAGES[stIdx+1].color}';this.style.color='#fff';this.style.borderColor='${STAGES[stIdx+1].color}'" onmouseout="this.style.background='#f8fafc';this.style.color='#475569';this.style.borderColor='var(--border)'">→</button>`:''}
+                    <button onclick="rejectRecord('${r.id}',event)" title="Không tài trợ" style="width:28px;height:28px;border-radius:6px;border:1px solid #fca5a5;background:#fff5f5;color:#dc2626;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseover="this.style.background='#dc2626';this.style.color='#fff'" onmouseout="this.style.background='#fff5f5';this.style.color='#dc2626'">✕</button>
+                  </div>
                 </div>
                 <div class="kb-card-meta" style="margin-top:6px">
                   ${ot>0?`<span class="kb-card-val">${fmtMoney(ot)}</span>`:''}
@@ -1981,6 +2003,34 @@ function renderKanban(){
               </div>`;}).join('')}
           </div>
         </div>`).join('')}
+      ${ST.showRejected?`
+        <div class="kb-col" style="border-top:2px solid #dc2626">
+          <div class="kb-col-head" style="color:#dc2626">
+            <div style="flex:1">
+              <div class="kb-col-title">❌ Không tài trợ</div>
+              <div style="font-size:10.5px;color:#94a3b8;margin-top:1px;font-weight:400">Đã từ chối / không tài trợ</div>
+            </div>
+            <span class="kb-col-count">${rejectedList.length}</span>
+          </div>
+          <div class="kb-cards">
+            ${rejectedList.length===0?'<div style="padding:16px 8px;text-align:center;color:#94a3b8;font-size:12px">Trống</div>':''}
+            ${rejectedList.map(r=>{
+              const ot=offerTotal(r);
+              const rdFmt=(s=>{if(!s)return'';const iso=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);if(iso)return`${iso[3]}/${iso[2]}/${iso[1]}`;try{const dt=new Date(s);if(!isNaN(dt))return`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;}catch{}return'';})(r.receivedDate);
+              return`<div class="kb-card${ST.selId===r.id?' selected':''}" data-id="${r.id}" onclick="openPanel('${r.id}')" style="opacity:.85;border-left:3px solid #dc262644">
+                <div style="display:flex;align-items:flex-start;gap:6px">
+                  <div style="flex:1;min-width:0">
+                    <div class="kb-card-org">${r.org}</div>
+                    <div class="kb-card-event">${r.event}</div>
+                    ${rdFmt?`<div style="font-size:10.5px;color:#94a3b8;margin-top:2px">📥 Nhận: ${rdFmt}</div>`:''}
+                    ${r.neg_result?`<div style="font-size:10.5px;color:#dc2626;margin-top:3px;font-weight:600">❌ Không tài trợ</div>`:''}
+                  </div>
+                  <button onclick="restoreRecord('${r.id}',event)" title="Khôi phục về pipeline" style="flex-shrink:0;padding:3px 8px;border-radius:5px;border:1px solid #dc2626;background:#fee2e2;color:#dc2626;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap">↩ Khôi phục</button>
+                </div>
+                ${ot>0?`<div class="kb-card-meta" style="margin-top:6px"><span class="kb-card-val">${fmtMoney(ot)}</span>${r.cat?`<span class="kb-card-cat">${r.cat}</span>`:''}</div>`:''}
+              </div>`;}).join('')}
+          </div>
+        </div>`:''}
     </div>`;
 }
 
@@ -1999,6 +2049,7 @@ function renderList(){
   let h=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
     <button class="stg-pill" onclick="setStageFilter(null)" style="${!ST.stageFilter&&!ST.voucherFilter?`border-color:${tm2.color};background:${tm2.bg};color:${tm2.color}`:``}">Tất cả (${_allRecs.length})</button>
     ${STAGES.map(st=>`<button class="stg-pill" onclick="setStageFilter('${st.id}')" style="${ST.stageFilter===st.id&&!ST.voucherFilter?`border-color:${st.color};background:${st.color}22;color:${st.color}`:``}">${st.label} <span style="opacity:.7">(${_stgCnts[st.id]||0})</span></button>`).join('')}
+    <button class="stg-pill" onclick="ST.showRejected=!ST.showRejected;ST.stageFilter=ST.showRejected?'rejected':null;render()" style="${ST.stageFilter==='rejected'?'border-color:#dc2626;background:#fee2e2;color:#dc2626':''}">❌ Không TT <span style="opacity:.7">(${_allRecs.filter(r=>r.stage==='rejected').length})</span></button>
     <button class="stg-pill" onclick="setVoucherFilter()" style="${ST.voucherFilter?'border-color:#7c3aed;background:#ede9fe;color:#7c3aed':''}" title="Chỉ hiện hồ sơ có voucher">🎟️ Có voucher <span style="opacity:.7">(${_allRecs.filter(r=>r.mavoucher||r.voucher_status).length})</span></button>
   </div>`;
   // Bulk action bar
@@ -3728,7 +3779,7 @@ function openAddModal(id){
   _editId=id||null;window._pendingBenefits=null;_pendingApproval=null;_offerInlineDraft=[];
   _extracted={}; // reset mỗi lần mở modal — tránh data của record cũ ghi đè record mới (fb10)
   document.getElementById('modalTitle').textContent=id?'Chỉnh sửa hồ sơ':'Thêm hồ sơ xin tài trợ';
-  const stageSel=document.getElementById('f_stage');stageSel.innerHTML=STAGES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('');
+  const stageSel=document.getElementById('f_stage');stageSel.innerHTML=STAGES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')+`<option value="rejected">❌ Không tài trợ</option>`;
   const catSel=document.getElementById('f_cat');catSel.innerHTML='<option value="">-- Chọn --</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
   const yearSel=document.getElementById('f_year');yearSel.innerHTML=YEARS.map(y=>`<option value="${y}">${y}</option>`).join('');
   if(id){
@@ -3867,13 +3918,17 @@ function saveRecord(){
       r.roomSponsorships=_roomDraft.filter(e=>e.date||e.purpose||(e.rooms&&e.rooms.some(rm=>rm.capacity)));
       if(_mapsReviewDraft.qty>0)r.mapsReview={qty:_mapsReviewDraft.qty,perMap:[..._mapsReviewDraft.perMap]};else delete r.mapsReview;
       if(r.track==='venue')r.venue_schedules=_venueScheduleDraft.map(vs=>({...vs}));
-      // Tự động chuyển stage khi duyệt/từ chối offer
-      if(_pendingApproval&&_pendingApproval.status==='approved'&&['received','reviewing','offered'].includes(r.stage))r.stage='negotiating';
-      if(_pendingApproval&&_pendingApproval.status==='rejected'&&['received','offered'].includes(r.stage))r.stage='reviewing';
-      // Nếu điền offer mà hồ sơ còn ở Mới nhận / Đang xét → tự chuyển Đã offer (chờ duyệt)
-      if(inlineOffer&&inlineTotal>0&&['received','reviewing'].includes(r.stage))r.stage='offered';
-      // Tự động chuyển sang Thực thi khi hợp đồng đã ký
-      if(r.contract_status==='da_ky'&&r.stage==='signing')r.stage='executing';
+      // Tự động chuyển sang Không tài trợ khi kết quả đàm phán = khong_tai_tro
+      if(r.neg_result==='khong_tai_tro')r.stage='rejected';
+      // Tự động chuyển stage khi duyệt/từ chối offer (chỉ áp dụng khi chưa bị rejected)
+      if(r.stage!=='rejected'){
+        if(_pendingApproval&&_pendingApproval.status==='approved'&&['received','reviewing','offered'].includes(r.stage))r.stage='negotiating';
+        if(_pendingApproval&&_pendingApproval.status==='rejected'&&['received','offered'].includes(r.stage))r.stage='reviewing';
+        // Nếu điền offer mà hồ sơ còn ở Mới nhận / Đang xét → tự chuyển Đã offer (chờ duyệt)
+        if(inlineOffer&&inlineTotal>0&&['received','reviewing'].includes(r.stage))r.stage='offered';
+        // Tự động chuyển sang Thực thi khi hợp đồng đã ký
+        if(r.contract_status==='da_ky'&&r.stage==='signing')r.stage='executing';
+      }
     }
   }else{
     // Tự động chọn stage phù hợp khi thêm mới
@@ -4412,6 +4467,30 @@ function advanceStage(id,e){
   r.stage=STAGES[idx+1].id;
   r.updatedAt=new Date().toISOString();
   saveAll(a);
+  if(ST.selId===id)renderPanel();
+  render();
+}
+function rejectRecord(id,e){
+  e.stopPropagation();
+  if(!confirm('Đánh dấu "Không tài trợ"?\nHồ sơ sẽ được ẩn khỏi pipeline chính.'))return;
+  const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;
+  r.stage='rejected';
+  r.neg_result='khong_tai_tro';
+  r.updatedAt=new Date().toISOString();
+  saveAll(a);
+  addLog('edit','Đánh dấu không tài trợ: '+(r.org||'')+' — '+(r.event||''));
+  if(ST.selId===id)renderPanel();
+  render();
+}
+function restoreRecord(id,e){
+  e.stopPropagation();
+  if(!confirm('Khôi phục hồ sơ về pipeline?\nKết quả đàm phán sẽ được xóa.'))return;
+  const a=loadAll();const r=a.find(x=>x.id===id);if(!r)return;
+  r.stage='received';
+  r.neg_result='';
+  r.updatedAt=new Date().toISOString();
+  saveAll(a);
+  addLog('edit','Khôi phục hồ sơ vào pipeline: '+(r.org||'')+' — '+(r.event||''));
   if(ST.selId===id)renderPanel();
   render();
 }
