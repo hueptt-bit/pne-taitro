@@ -3917,6 +3917,37 @@ function saveRecord(){
     console.error('saveRecord error:',e);
     return;
   }
+  // Sync voucher lên CRM chỉ khi CHUYỂN SANG da_giao lần đầu (và chưa sync thành công)
+  {const nr=loadAll().find(x=>x.id===savedId);
+  if(voucherStatusSave==='da_giao'&&_oldVoucherStatus!=='da_giao'&&GAS_URL&&!nr?.crm_voucher_synced){
+    if(nr&&nr.mavoucher){
+      const vItems=(nr.neg_items||[]).filter(i=>!i.isCash&&+i.qty>0);
+      if(vItems.length>0){
+        const today=new Date().toISOString().slice(0,10);
+        // Lưu ngày giao vào record
+        const a2=loadAll();const r2=a2.find(x=>x.id===savedId);
+        if(r2){r2.da_giao_date=today;saveAll(a2);}
+        fetch(GAS_URL,{method:'POST',body:JSON.stringify({
+          action:'syncVouchersToCRM',
+          org:nr.org||'',
+          mavoucher:nr.mavoucher||'',
+          hanvoucher:nr.hanvoucher||'',
+          ngay_giao:today,
+          neg_items:vItems.map(i=>({label:i.label||i.type||'',qty:+i.qty||0,maxVal:+i.maxVal||0}))
+        })}).then(r=>r.json()).then(d=>{
+          if(d&&d.ok){
+            // Đánh dấu đã sync thành công — ngăn re-trigger nếu user đổi status đi rồi đổi lại
+            const a3=loadAll();const r3=a3.find(x=>x.id===savedId);
+            if(r3){r3.crm_voucher_synced=true;saveAll(a3);}
+            showToast('✅ Đã tạo '+d.created.length+' loại voucher trên CRM!','success',4000);
+          } else {
+            // Không set flag → cho phép retry lần sau
+            showToast('⚠️ Lưu OK nhưng CRM lỗi: '+(d&&d.error||JSON.stringify((d&&d.errors)||[]).slice(0,120)),'warn',7000);
+          }
+        }).catch(()=>showToast('⚠️ Lưu OK nhưng không sync được CRM','warn',3000));
+      }
+    }
+  }}
   // Gửi Telegram thông báo in chỉ khi CHUYỂN SANG chuyen_in (không gửi lại nếu đã là chuyen_in)
   if(voucherStatusSave==='chuyen_in'&&_oldVoucherStatus!=='chuyen_in'&&GAS_URL){
     const nr=loadAll().find(x=>x.id===savedId);

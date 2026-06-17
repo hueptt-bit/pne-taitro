@@ -1,0 +1,71 @@
+Anh/chị IT ơi, em cần nhờ setup hosting cho trang web nội bộ của bộ phận Tài trợ. Chi tiết như sau:
+
+========================================
+1. TẠO SUBDOMAIN
+========================================
+
+- Subdomain: sponsorship.phuongnameducation.com
+- Bật HTTPS/SSL cho subdomain này
+
+========================================
+2. CLONE REPO VỀ SERVER (chạy 1 lần duy nhất)
+========================================
+
+cd /var/www/sponsorship
+git clone https://github.com/hueptt-bit/pne-taitro.git .
+
+Sau khi clone xong, truy cập địa chỉ bên dưới là mở được trang:
+https://sponsorship.phuongnameducation.com/dashboard.html
+
+========================================
+3. TẠO FILE deploy.php (để tự động cập nhật code)
+========================================
+
+Tạo file tại: /var/www/sponsorship/deploy.php
+Nội dung file như sau (anh/chị tự đặt chuỗi bí mật ở dòng đầu):
+
+---BẮT ĐẦU NỘI DUNG FILE---
+
+<?php
+$secret = 'CHUỖI_BÍ_MẬT_TỰ_ĐẶT';
+
+$payload = file_get_contents('php://input');
+$sig     = 'sha256=' . hash_hmac('sha256', $payload, $secret);
+
+if (!hash_equals($sig, $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '')) {
+    http_response_code(401);
+    die('Unauthorized');
+}
+
+$data = json_decode($payload, true);
+if (($data['ref'] ?? '') !== 'refs/heads/main') {
+    die('Not main branch, skipping.');
+}
+
+exec('cd /var/www/sponsorship && git pull origin main 2>&1', $output);
+file_put_contents(__DIR__ . '/deploy.log', date('Y-m-d H:i:s') . "\n" . implode("\n", $output) . "\n\n", FILE_APPEND);
+
+http_response_code(200);
+echo 'Deploy OK';
+
+---KẾT THÚC NỘI DUNG FILE---
+
+Sau khi tạo xong, anh/chị báo lại cho em chuỗi bí mật đã đặt để em điền vào GitHub là hoàn tất.
+
+========================================
+4. LƯU Ý KỸ THUẬT
+========================================
+
+- Web server (Nginx/Apache) cần cho phép chạy file .php
+- Server cần có git đã cài sẵn
+- User chạy web server cần có quyền đọc/ghi thư mục chứa web
+- File HTML có gọi ra script.google.com — không cần cấu hình thêm gì phía server
+
+========================================
+5. PHẦN EM TỰ LÀM SAU KHI ANH/CHỊ XONG
+========================================
+
+Em sẽ tự vào GitHub đăng ký webhook, anh/chị không cần làm thêm gì.
+Từ đó về sau em push code lên GitHub là server tự cập nhật, không cần upload thủ công.
+
+Cảm ơn anh/chị!

@@ -4,34 +4,17 @@
 // ═══════════════════════════════════════════════════════════════
 
 const CONFIG = {
-  TG_TOKEN:          PropertiesService.getScriptProperties().getProperty('TG_TOKEN') || '',
-  TG_CHAT_ID:        '-5110564753',          // Group chính (nhận hồ sơ mới, liên hệ...)
-  TG_EXEC_CHAT_ID:   '-5158615383',           // Group thực thi [Tài trợ] Trả quyền lợi
-  TG_VOUCHER_CHAT_ID:'-5285106597',           // Group in voucher (nhận yêu cầu in + xác nhận)
-  SHEET_NAME:        'Records',
-  DELETED_SHEET:     'Deleted',          // Sheet lưu các ID đã xoá
-  SPREADSHEET_ID:    '1zXOliDHlkELXzLE0dIAZc9s5ubbD5Knglfa94Y-hAfs',
-  WEB_APP_URL:       'https://script.google.com/macros/s/AKfycbzbj-icBWeMN-_5c7wV1SnAoWgk3dtcwzaSj_j_emrvAibrx_HwFr17s7cSngZVjz_VYQ/exec',
-  DASHBOARD_URL:     'https://hueptt-bit.github.io/pne-taitro/dashboard.html',
-  GMAIL_QUERY:       '-label:pne-processed newer_than:3d',
-  GMAIL_LABEL:       'pne-processed',
-  // ── CRM API (proxy lịch phòng — key lưu trong Script Properties) ──
-  CRM_API_KEY:       PropertiesService.getScriptProperties().getProperty('CRM_API_KEY') || '',
-  CRM_BASE_URL:      'https://api.phuongnameducation.com/_/sponsorship',
-};
-
-// ═══════════════════════════════════════════════════════════════
-// MAPS REVIEW — hằng số dùng khi tạo tracking
-// ═══════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════
-// VOUCHER — nhãn hiển thị cho từng loại voucher
-// ═══════════════════════════════════════════════════════════════
-
-const VOUCHER_TYPE_LABELS = {
-  '100%': '100% (9.8M)', '80%': '80% (7.84M)', '50%': '50% (4.9M)',
-  '35%': '35% (3.43M)', '30%': '30% (2.94M)', '25%': '25% (2.45M)',
-  '20%': '20% (1.96M)', '15%': '15% (1.47M)', 'Gấu bông': 'Gấu bông (180K)',
+  TG_TOKEN:           '8883609953:AAEe88AtNr808jQhJ0gZM8ntX7ShSVXfHTI',
+  TG_CHAT_ID:         '-5110564753',    // Group chính (nhận hồ sơ mới, liên hệ...)
+  TG_EXEC_CHAT_ID:    '-5158615383',    // Group thực thi [Tài trợ] Trả quyền lợi
+  TG_VOUCHER_CHAT_ID: '-5285106597',    // Group in voucher
+  SHEET_NAME:         'Records',
+  DELETED_SHEET:      'Deleted',        // Sheet lưu các ID đã xoá
+  SPREADSHEET_ID:     '1zXOliDHlkELXzLE0dIAZc9s5ubbD5Knglfa94Y-hAfs',
+  WEB_APP_URL:        'https://script.google.com/macros/s/AKfycbzbj-icBWeMN-_5c7wV1SnAoWgk3dtcwzaSj_j_emrvAibrx_HwFr17s7cSngZVjz_VYQ/exec',
+  DASHBOARD_URL:      'https://sponsorship.phuongnameducation.com/dashboard.html',
+  GMAIL_QUERY:        '-label:pne-processed newer_than:3d',
+  GMAIL_LABEL:        'pne-processed',
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -85,11 +68,8 @@ const COLS = [
   { key: 'contract_link',     label: 'Link hợp đồng' },
   { key: 'contract_note',     label: 'Ghi chú HĐ' },
   // ── Voucher ────────────────────────────────────────────────
-  { key: 'mavoucher',              label: 'Mã voucher' },
-  { key: 'hanvoucher',             label: 'Hạn voucher' },
-  { key: 'voucher_status',         label: 'TT in voucher' },
-  { key: 'voucher_print_qty',      label: 'SL in' },
-  { key: 'voucher_print_deadline', label: 'Deadline in' },
+  { key: 'mavoucher',         label: 'Mã voucher' },
+  { key: 'hanvoucher',        label: 'Hạn voucher' },
   // ── Thực thi ───────────────────────────────────────────────
   { key: 'anhsukien',         label: 'Album ảnh sự kiện' },
   { key: 'data',              label: 'Link data' },
@@ -118,8 +98,10 @@ const COLS = [
   { key: '_roomSponsorships_json', label: '[JSON] Tài trợ phòng' },
   // ── Timestamp ──────────────────────────────────────────────
   { key: 'updatedAt',              label: 'Cập nhật lúc' },
-  // ── Nội dung hồ sơ (đặt cuối để không xê dịch chỉ số cột cũ) ──
-  { key: 'proposalText',           label: 'Nội dung hồ sơ' },
+  // ── Voucher in ─────────────────────────────────────────────
+  { key: 'voucher_status',         label: 'TT in voucher' },
+  { key: 'voucher_print_qty',      label: 'SL cần in' },
+  { key: 'voucher_print_deadline', label: 'Deadline in' },
 ];
 
 // Tạo lookup nhanh: key → index (1-based)
@@ -223,8 +205,7 @@ function recordToRow(r) {
       case '_approval_json':         return r.approval ? JSON.stringify(r.approval) : '';
       case '_mapsReview_json':       return r.mapsReview && r.mapsReview.qty > 0 ? JSON.stringify(r.mapsReview) : '';
       case '_roomSponsorships_json': return r.roomSponsorships && r.roomSponsorships.length ? JSON.stringify(r.roomSponsorships) : '';
-      case 'updatedAt':              return r.updatedAt || new Date().toISOString();
-      case 'proposalText':           return r.proposalText ? String(r.proposalText).slice(0, 49000) : ''; // giới hạn ô Sheet ~50k ký tự
+      case 'updatedAt':              return new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       default:                  return r[c.key] !== undefined ? r[c.key] : '';
     }
   });
@@ -273,7 +254,7 @@ function rowToRecord(row) {
         if (val) try { r.roomSponsorships = JSON.parse(val); } catch(e) { r.roomSponsorships = []; }
         else r.roomSponsorships = [];
         break;
-      case 'updatedAt': if (val && val !== '') r.updatedAt = String(val); break; // ISO string từ sheet
+      case 'updatedAt': break; // metadata — bỏ qua
       default:
         if (val !== '' && val !== null && val !== undefined) r[c.key] = String(val);
         else if (r[c.key] === undefined) r[c.key] = '';
@@ -324,8 +305,6 @@ function upsertRecord(record) {
 
 function saveAllRecords(records) {
   const sheet = getSheet();
-  // Tự đồng bộ header với COLS hiện tại (cập nhật cột mới như proposalText mà không cần chạy lại setup)
-  sheet.getRange(1, 1, 1, COLS.length).setValues([COLS.map(c => c.label)]);
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, COLS.length).clearContent();
   if (!records.length) return;
@@ -348,7 +327,6 @@ function updateRecordField(id, field, value) {
   const row = sheet.getRange(rowIdx, 1, 1, COLS.length).getValues()[0];
   const record = rowToRecord(row);
   record[field] = value;
-  record.updatedAt = new Date().toISOString(); // Stamp để auto-sync dashboard nhận biết thay đổi
   sheet.getRange(rowIdx, 1, 1, COLS.length).setValues([recordToRow(record)]);
   return record;
 }
@@ -389,13 +367,6 @@ function doGet(e) {
   }
   if (action === 'ping') {
     return jsonResponse({ ok: true, time: new Date().toISOString() });
-  }
-  if (action === 'getRoomSchedule') {
-    const date = (e.parameter && e.parameter.date) || '';
-    return jsonResponse(proxyRoomSchedule(date));
-  }
-  if (action === 'getRooms') {
-    return jsonResponse(proxyRooms());
   }
   if (action === 'login') {
     const username = String((e.parameter && e.parameter.username) || '').trim().toLowerCase();
@@ -442,7 +413,7 @@ function doPost(e) {
 
   // ── Dashboard API ──
   const action = body.action;
-
+  if (action === 'voucherPrintNotify') return handleVoucherPrintNotify(body);
   if (action === 'saveAll') {
     saveAllRecords(body.records || []);
     // Đồng bộ danh sách ID đã xoá nếu có
@@ -470,14 +441,6 @@ function doPost(e) {
     try { return jsonResponse(createTrackingForRecord(body.id)); }
     catch(e) { return jsonResponse({ ok: false, error: 'createTracking: ' + e.message }); }
   }
-  if (action === 'voucherPrintNotify') {
-    try { return jsonResponse(handleVoucherPrintNotify(body)); }
-    catch(e) { return jsonResponse({ ok: false, error: 'voucherPrintNotify: ' + e.message }); }
-  }
-  if (action === 'syncVouchersToCRM') {
-    try { return jsonResponse(syncVouchersToCRM(body)); }
-    catch(e) { return jsonResponse({ ok: false, error: 'syncVouchersToCRM: ' + e.message }); }
-  }
 
   if (action === 'login') {
     const username = String(body.username || '').trim().toLowerCase();
@@ -487,7 +450,6 @@ function doPost(e) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName('Users');
 
-    // Tu dong tao sheet Users voi 3 tai khoan mac dinh neu chua co
     if (!sheet) {
       sheet = ss.insertSheet('Users');
       sheet.getRange(1, 1, 1, 5).setValues([['username', 'password', 'name', 'role', 'active']]);
@@ -514,72 +476,6 @@ function doPost(e) {
   }
 
   return jsonResponse({ ok: false, error: 'Unknown POST action: ' + action });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CRM PROXY — Gọi CRM API thay cho dashboard (ẩn API key)
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Proxy GET /api/room-schedule?date=YYYY-MM-DD từ CRM.
- * Dashboard gọi: GAS_URL?action=getRoomSchedule&date=2026-05-27
- * GAS gọi CRM với X-Api-Key, trả kết quả về dashboard.
- * Map field: title → code (để khớp với blockHtml hiện tại)
- */
-function proxyRoomSchedule(date) {
-  if (!date) return { ok: false, error: 'Missing date param' };
-  const key = CONFIG.CRM_API_KEY;
-  if (!key) return { ok: false, error: 'CRM_API_KEY chưa được cấu hình trong Script Properties. Chạy setupCrmApiKey() để cài đặt.' };
-  try {
-    const res = UrlFetchApp.fetch(
-      CONFIG.CRM_BASE_URL + '/api/room-schedule?date=' + encodeURIComponent(date),
-      { headers: { 'X-Api-Key': key }, muteHttpExceptions: true }
-    );
-    const code = res.getResponseCode();
-    if (code !== 200) return { ok: false, error: 'CRM trả HTTP ' + code };
-    const data = JSON.parse(res.getContentText());
-    // Chuẩn hoá về format dashboard đang dùng: { room, code, teacher, start, end, hv, cap }
-    const sessions = Array.isArray(data) ? data.map(function(s) {
-      // Normalize room ID: đảm bảo luôn có prefix "P." để khớp với RS_ROOMS trong dashboard
-      const rawRoom = String(s.room || '');
-      const roomId  = rawRoom.startsWith('P.') ? rawRoom : (rawRoom ? 'P.' + rawRoom : '');
-      return {
-        room:    roomId,
-        code:    s.title   || rawRoom || '',  // CRM trả "title", dashboard dùng "code"
-        teacher: s.teacher || '',
-        start:   s.start   || '00:00',
-        end:     s.end     || '00:00',
-        hv:      s.hv      || 0,
-        cap:     s.cap     || 0,
-      };
-    }) : [];
-    return { ok: true, sessions: sessions };
-  } catch(e) {
-    Logger.log('proxyRoomSchedule error: ' + e.message);
-    return { ok: false, error: 'proxyRoomSchedule: ' + e.message };
-  }
-}
-
-/**
- * Proxy GET /api/rooms từ CRM — trả danh sách phòng với sức chứa đúng.
- * Dashboard gọi: GAS_URL?action=getRooms
- */
-function proxyRooms() {
-  const key = CONFIG.CRM_API_KEY;
-  if (!key) return { ok: false, error: 'CRM_API_KEY chưa được cấu hình' };
-  try {
-    const res = UrlFetchApp.fetch(
-      CONFIG.CRM_BASE_URL + '/api/rooms',
-      { headers: { 'X-Api-Key': key }, muteHttpExceptions: true }
-    );
-    const code = res.getResponseCode();
-    if (code !== 200) return { ok: false, error: 'CRM trả HTTP ' + code };
-    const data = JSON.parse(res.getContentText());
-    return { ok: true, rooms: Array.isArray(data) ? data : [] };
-  } catch(e) {
-    Logger.log('proxyRooms error: ' + e.message);
-    return { ok: false, error: 'proxyRooms: ' + e.message };
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -663,14 +559,10 @@ function extractBenefitsFromDoc(docUrl) {
   return benefits;
 }
 
-// Trả về true nếu text trông như dòng giá gói (không phải quyền lợi thực sự)
-// VD: "50.000.000 VNĐ Gói Vàng: ..." hoặc "Gói Vàng: 25M ..."
 function isPricingText(text) {
   if (!text) return false;
   const t = text.trim();
-  // Bắt đầu bằng số tiền: "50.000.000 VNĐ" hoặc "50,000,000đ"
   if (/^\d[\d\.,]+\s*(VNĐ|vnđ|đồng|đ)\b/i.test(t)) return true;
-  // Chứa nhiều mức giá gói liên tiếp: "Gói Vàng.*Gói Bạc" hoặc "Gói Đồng"
   const pkgCount = (t.match(/Gói\s*(Vàng|Bạc|Đồng|Kim cương|Bạch kim|Đồng hành)/gi) || []).length;
   if (pkgCount >= 2) return true;
   return false;
@@ -737,23 +629,17 @@ function buildTrackingSpreadsheet(org, event, benefitRows) {
       const hasSub = b.subRows && b.subRows.length > 0;
       const numRows = hasSub ? b.subRows.length : 1;
 
-      // Col A — category label (styled/merged at category level below)
       sheet.getRange(currentRow, 1).setValue(cat);
-      // Col H — category metadata (hidden; used by GAS to read progress per row)
       for (var _ri = 0; _ri < numRows; _ri++) {
         sheet.getRange(bStartRow + _ri, 8).setValue(cat);
       }
-      // Col B — benefit name (merged across subRows if applicable)
       sheet.getRange(currentRow, 2).setValue(b.name || '').setWrap(true);
-      // Col D — yêu cầu (first row; merged across subRows if applicable)
       sheet.getRange(currentRow, 4).setValue(b.yeuCau || '').setWrap(true);
 
       if (hasSub) {
-        // Col C — one chiTiet per sub-row
         b.subRows.forEach(function(sr, si) {
           sheet.getRange(bStartRow + si, 3).setValue(sr.chiTiet || '').setWrap(true);
         });
-        // Merge col B and col D across all sub-rows of this benefit
         if (numRows > 1) {
           sheet.getRange(bStartRow, 2, numRows, 1).merge().setVerticalAlignment('middle');
           sheet.getRange(bStartRow, 4, numRows, 1).merge().setVerticalAlignment('top');
@@ -765,7 +651,6 @@ function buildTrackingSpreadsheet(org, event, benefitRows) {
       }
     });
 
-    // Style and merge col A across all rows in this category
     const totalCatRows = currentRow - startCatRow;
     if (totalCatRows > 1) sheet.getRange(startCatRow, 1, totalCatRows, 1).merge();
     sheet.getRange(startCatRow, 1, totalCatRows, 1).setBackground(ORANGE).setFontWeight('bold')
@@ -773,7 +658,6 @@ function buildTrackingSpreadsheet(org, event, benefitRows) {
     sheet.getRange(startCatRow, 2, totalCatRows, 6).setVerticalAlignment('top').setWrap(true);
   });
 
-  // Dropdown [Chưa làm / Đang làm / Hoàn thành] cho toàn bộ col G data rows
   const totalDataRows = currentRow - 3;
   if (totalDataRows > 0) {
     const dropRule = SpreadsheetApp.newDataValidation()
@@ -784,7 +668,6 @@ function buildTrackingSpreadsheet(org, event, benefitRows) {
     gRange.setDataValidation(dropRule);
     gRange.setValue('Chưa làm');
   }
-  // Ẩn col H (metadata — không hiện cho người dùng)
   sheet.hideColumns(8);
 
   const totalRows = currentRow - 1;
@@ -800,12 +683,6 @@ function buildTrackingSpreadsheet(org, event, benefitRows) {
 // TRACKING PROGRESS — đọc tiến độ & auto-complete
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Đọc tiến độ hoàn thành từ file tracking.
- * Col G = status (Chưa làm / Đang làm / Hoàn thành)
- * Col H = category (metadata ẩn)
- * @returns {total, done, pct, pending[], byCategory{}} hoặc null nếu lỗi
- */
 function readTrackingProgress(ssUrl) {
   try {
     const match = ssUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -818,18 +695,17 @@ function readTrackingProgress(ssUrl) {
     if (lastRow < 3) return { total: 0, done: 0, pct: 0, pending: [], byCategory: {} };
 
     const numDataRows = lastRow - 2;
-    // Đọc cols B(2)..H(8) — range width = 7, index trong mảng: B=0, C=1, G=5, H=6
     const data = sheet.getRange(3, 2, numDataRows, 7).getValues();
 
     let total = 0, done = 0;
     const pending = [], byCategory = {};
 
     data.forEach(function(row) {
-      const category = String(row[6] || '').trim(); // col H
-      if (!category) return; // hàng không có metadata → bỏ qua
-      const status   = String(row[5] || '').trim(); // col G
-      const nameB    = String(row[0] || '').trim(); // col B (merged → empty for sub-rows)
-      const chiTietC = String(row[1] || '').trim(); // col C
+      const category = String(row[6] || '').trim();
+      if (!category) return;
+      const status   = String(row[5] || '').trim();
+      const nameB    = String(row[0] || '').trim();
+      const chiTietC = String(row[1] || '').trim();
 
       total++;
       if (!byCategory[category]) byCategory[category] = { total: 0, done: 0 };
@@ -839,7 +715,6 @@ function readTrackingProgress(ssUrl) {
         done++;
         byCategory[category].done++;
       } else {
-        // Dùng tên quyền lợi (B) hoặc chi tiết (C) cho danh sách chưa xong
         const label = nameB || chiTietC;
         if (label) pending.push(label.substring(0, 60));
       }
@@ -858,10 +733,6 @@ function readTrackingProgress(ssUrl) {
   }
 }
 
-/**
- * Sau ngày sự kiện: tự động đánh dấu "Hoàn thành" cho toàn bộ
- * quyền lợi "Trực tiếp" (xảy ra tại sự kiện — đã qua = done).
- */
 function autoCompleteDirectBenefits(ssUrl) {
   try {
     const match = ssUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -874,8 +745,8 @@ function autoCompleteDirectBenefits(ssUrl) {
     if (lastRow < 3) return 0;
 
     const numDataRows = lastRow - 2;
-    const hVals = sheet.getRange(3, 8, numDataRows, 1).getValues(); // col H
-    const gVals = sheet.getRange(3, 7, numDataRows, 1).getValues(); // col G
+    const hVals = sheet.getRange(3, 8, numDataRows, 1).getValues();
+    const gVals = sheet.getRange(3, 7, numDataRows, 1).getValues();
 
     let updated = 0;
     hVals.forEach(function(row, i) {
@@ -913,21 +784,18 @@ function checkNewEmails() {
     const body    = msg.getPlainBody().substring(0, 800);
     const date    = msg.getDate();
 
-    // ── Loại trừ email hệ thống (noreply, Google Docs comments, v.v.) ──
     const fromLower = from.toLowerCase();
     const systemSenders = ['noreply', 'no-reply', 'mailer-daemon', 'comments-noreply', 'notifications-noreply'];
     if (systemSenders.some(s => fromLower.indexOf(s) !== -1)) {
-      thread.addLabel(label); // đánh dấu processed để không xét lại
+      thread.addLabel(label);
       return;
     }
 
-    // ── Loại trừ Re: (reply loop) ──
     if (/^Re\s*:/i.test(subject)) {
       thread.addLabel(label);
       return;
     }
 
-    // ── Chỉ xử lý email tài trợ/hợp tác — bỏ qua email không liên quan ──
     const subjLower = subject.toLowerCase();
     const sponsorKeywords = [
       'tài trợ', 'hợp tác', 'thư mời', 'thư ngỏ',
@@ -943,19 +811,16 @@ function checkNewEmails() {
     const nameMatch = from.match(/^"?([^"<@]+)"?\s*</);
     const fromName  = nameMatch ? nameMatch[1].trim() : from;
 
-    // ── Xử lý email Fwd (chuyển tiếp) — lấy tên CLB gốc từ body ──
     let orgName    = fromName;
     let orgContact = from;
     let orgEvent   = subject;
     const isFwd = /^(Fwd|FW|Chuyển tiếp)\s*:/i.test(subject);
     if (isFwd) {
-      // Trích tên + email người gửi gốc từ block "---------- Forwarded message"
       const fwdFrom = body.match(/(?:Từ|From)\s*:\s*([^\n<]+?)\s*[<\[]([\w._%+\-]+@[\w.\-]+\.\w+)[>\]]/i);
       if (fwdFrom) {
         orgName    = fwdFrom[1].trim().replace(/^["']|["']$/g, '');
         orgContact = fwdFrom[2].trim();
       }
-      // Trích subject gốc (bỏ tiền tố Fwd/FW)
       const fwdSubj = body.match(/(?:Subject|Chủ đề)\s*:\s*([^\n]+)/i);
       if (fwdSubj) {
         orgEvent = fwdSubj[1].trim().replace(/^(Fwd|FW|Chuyển tiếp)\s*:\s*/i, '');
@@ -999,7 +864,6 @@ function checkNewEmails() {
     sendTelegramNewMail(record);
     thread.addLabel(label);
 
-    // ── Gán nhãn phân loại PNE/Hợp đồng hoặc PNE/Lời mời ──
     const contractKeywords = ['hợp đồng', 'hop dong', 'ký kết', 'ky ket', 'thỏa thuận', 'thoa thuan', 'biên bản', 'bien ban', 'contract', 'agreement'];
     const inviteKeywords   = ['thư mời', 'thư ngỏ', 'thu moi', 'thu ngo', 'lời mời', 'loi moi'];
     const fullText = (subject + ' ' + body).toLowerCase();
@@ -1020,8 +884,6 @@ function checkNewEmails() {
 }
 
 function getOrCreateNestedLabel(fullName) {
-  // Tạo label con trong Gmail (ví dụ: "PNE/Hợp đồng")
-  // Gmail tự tạo parent "PNE" nếu chưa có khi tạo label con
   try {
     let lbl = GmailApp.getUserLabelByName(fullName);
     if (!lbl) lbl = GmailApp.createLabel(fullName);
@@ -1075,8 +937,6 @@ function handleTelegramCallback(cq) {
     const props = PropertiesService.getScriptProperties();
     props.setProperty('pending_zalo_' + chatId, recordId);
     props.setProperty('pending_zalo_time_' + chatId, String(Math.floor(Date.now() / 1000)));
-    tgCall('answerCallbackQuery', { callback_query_id: cq.id });
-    return;
   }
 
   if (action === 'close_record') {
@@ -1086,51 +946,27 @@ function handleTelegramCallback(cq) {
       `✅ <b>Hồ sơ đã được đóng!</b>\n\n` +
       (rec ? `🏫 ${escHtml(rec.org)}\n📌 ${escHtml(rec.event)}\n` : '') +
       `📋 Trạng thái → <b>Hoàn thành</b>`);
-    tgCall('answerCallbackQuery', { callback_query_id: cq.id });
-    return;
   }
 
-  // ── Voucher: xác nhận đã in ──
+  // ── Voucher print callbacks (từ VoucherNotify.gs) ──
   if (action === 'confirm_print') {
-    // Kiểm tra xem đã xác nhận trước đó chưa — tránh spam khi bấm nhiều lần
-    const rowIdx = findRowById(recordId);
-    if (rowIdx > 0) {
-      const row = getSheet().getRange(rowIdx, 1, 1, COLS.length).getValues()[0];
-      if (rowToRecord(row).voucher_status === 'da_in') {
-        tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '⚠️ Đã xác nhận trước đó rồi!', show_alert: true });
-        // Xoá nút trên tin này luôn (nếu chưa xoá)
-        tgCall('editMessageReplyMarkup', { chat_id: chatId, message_id: msgId, reply_markup: { inline_keyboard: [] } });
-        return;
-      }
-    }
-    updateRecordField(recordId, 'voucher_status', 'da_in');
+    const updated = updateRecordField(recordId, 'voucher_status', 'da_in');
     tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '✅ Đã xác nhận!' });
     const userName = (cq.from && cq.from.first_name) || 'ai đó';
-    // Chỉnh sửa tin gốc: thêm xác nhận vào cuối + xoá nút (không gửi tin mới)
-    // cq.message.text là plain text (Telegram đã xử lý Markdown khi gửi) → không cần parse_mode
-    const originalText = cq.message.text || '';
-    tgCall('editMessageText', {
-      chat_id: chatId,
-      message_id: msgId,
-      text: originalText + '\n\n✅ Đã in — xác nhận bởi ' + userName,
-      reply_markup: { inline_keyboard: [] },
-    });
+    if (updated) {
+      editTgMessage(chatId, msgId,
+        (cq.message.text || '') + `\n\n✅ *Đã in* — xác nhận bởi ${userName}`);
+    }
     return;
   }
 
-  // ── Voucher: báo lỗi in ──
   if (action === 'print_error') {
     tgCall('answerCallbackQuery', { callback_query_id: cq.id, text: '❗ Đã ghi nhận lỗi' });
     const userName = (cq.from && cq.from.first_name) || 'ai đó';
-    tgCall('editMessageReplyMarkup', {
-      chat_id: chatId, message_id: msgId,
-      reply_markup: { inline_keyboard: [] }
-    });
-    tgCall('sendMessage', {
-      chat_id: chatId,
-      text: `❗ *Báo lỗi in* từ ${userName}\nHồ sơ: \`${recordId}\`\nVui lòng kiểm tra lại yêu cầu.`,
-      parse_mode: 'Markdown',
-    });
+    // Xóa keyboard trên tin gốc để tránh bấm lặp
+    tgCall('editMessageReplyMarkup', { chat_id: chatId, message_id: msgId, reply_markup: { inline_keyboard: [] } });
+    sendTgText(chatId,
+      `❗ <b>Báo lỗi in</b> từ ${escHtml(userName)}\nHồ sơ: <code>${escHtml(recordId)}</code>\nVui lòng kiểm tra lại yêu cầu.`);
     return;
   }
 
@@ -1180,13 +1016,80 @@ function checkTelegramUpdates() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// VOUCHER PRINT NOTIFY — gửi Telegram yêu cầu in voucher
+// ═══════════════════════════════════════════════════════════════
+
+const VOUCHER_TYPE_LABELS = {
+  '100%': '100% (9.8M)', '80%': '80% (7.84M)', '50%': '50% (4.9M)',
+  '35%': '35% (3.43M)', '30%': '30% (2.94M)', '25%': '25% (2.45M)',
+  '20%': '20% (1.96M)', '15%': '15% (1.47M)', 'Gấu bông': 'Gấu bông (180K)',
+};
+
+function handleVoucherPrintNotify(payload) {
+  const { id, org, event, school, mavoucher, voucher_print_qty, voucher_print_deadline, neg_items } = payload;
+
+  // Build breakdown theo giá trị
+  const breakdown = (neg_items || [])
+    .filter(i => !i.isCash && (+i.qty || 0) > 0)
+    .map(i => {
+      const lbl = i.label || i.type || '?';
+      return `Voucher ${lbl}, SL: ${i.qty} cái`;
+    })
+    .join('\n');
+
+  // Format deadline
+  const dlFormatted = voucher_print_deadline
+    ? voucher_print_deadline.split('-').reverse().join('/')
+    : '(chưa xác định)';
+
+  // Format mã — prefix.01 → prefix.NN
+  const vPrefix = (mavoucher || '').replace(/\.\d{2}$/, '');
+  const qty = parseInt(voucher_print_qty) || 0;
+  const codeRange = vPrefix && qty > 0
+    ? `\`${vPrefix}.01\` → \`${vPrefix}.${String(qty).padStart(2, '0')}\``
+    : mavoucher ? `\`${mavoucher}\`` : '(chưa có mã)';
+
+  const msg = [
+    '🎟️ *YÊU CẦU IN VOUCHER*',
+    '',
+    `📌 *Chương trình:* ${org} — ${event}`,
+    school ? `🏫 *Trường:* ${school}` : null,
+    `🆔 *Mã:* ${codeRange}`,
+    `📦 *Tổng:* ${qty} voucher`,
+    breakdown ? `\n*Chi tiết:*\n${breakdown}` : null,
+    `\n⏰ *Deadline in:* ${dlFormatted}`,
+  ].filter(Boolean).join('\n');
+
+  const keyboard = {
+    inline_keyboard: [[
+      { text: '✅ Xác nhận đã in', callback_data: `confirm_print:${id}` },
+      { text: '❌ Báo lỗi',        callback_data: `print_error:${id}` }
+    ]]
+  };
+
+  try {
+    tgCall('sendMessage', {
+      chat_id:      CONFIG.TG_VOUCHER_CHAT_ID,
+      text:         msg,
+      parse_mode:   'Markdown',
+      reply_markup: keyboard,
+    });
+  } catch(e) {
+    Logger.log('handleVoucherPrintNotify error: ' + e.message);
+    return jsonResponse({ ok: false, error: e.message });
+  }
+
+  return jsonResponse({ ok: true });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TELEGRAM UTILS
 // ═══════════════════════════════════════════════════════════════
 
 function tgCall(method, payload) {
   return UrlFetchApp.fetch(
     'https://api.telegram.org/bot' + CONFIG.TG_TOKEN + '/' + method,
-    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true });
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload) });
 }
 function editTgMessage(chatId, msgId, text) {
   tgCall('editMessageText', { chat_id: chatId, message_id: msgId, text, parse_mode: 'HTML', reply_markup: { inline_keyboard: [] } });
@@ -1202,163 +1105,15 @@ function jsonResponse(data) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// VOUCHER PRINT NOTIFY — gửi yêu cầu in vào Group in voucher
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Gửi thông báo yêu cầu in voucher vào TG_VOUCHER_CHAT_ID.
- * Payload từ dashboard: { id, org, event, school, mavoucher,
- *   voucher_print_qty, voucher_print_deadline, neg_items }
- */
-/**
- * Sync voucher lên CRM khi dashboard đổi trạng thái → da_giao.
- * 1 call per loại voucher (mã), kèm so_luong của loại đó.
- * ma_voucher được tính tuần tự từ mavoucher prefix của record.
- */
-function syncVouchersToCRM(payload) {
-  const key = CONFIG.CRM_API_KEY;
-  if (!key) return { ok: false, error: 'CRM_API_KEY chưa cấu hình trong Script Properties' };
-
-  const { mavoucher, org, hanvoucher, ngay_giao, neg_items } = payload;
-  if (!mavoucher) return { ok: false, error: 'Thiếu mavoucher' };
-
-  const vItems = (neg_items || []).filter(function(i) { return !i.isCash && +i.qty > 0; });
-  if (!vItems.length) return { ok: false, error: 'Không có voucher items để sync' };
-
-  // Parse base prefix và starting index từ mavoucher (vd: "LCCU-BKHN-0526.01")
-  var match = String(mavoucher).match(/^(.+)\.(\d+)$/);
-  var base    = match ? match[1] : mavoucher;
-  var counter = match ? parseInt(match[2], 10) : 1;
-
-  var today = ngay_giao || new Date().toISOString().slice(0, 10);
-  var created = [];
-  var errors  = [];
-
-  for (var i = 0; i < vItems.length; i++) {
-    var item   = vItems[i];
-    var maCode = base + '.' + String(counter).padStart(2, '0');
-    var postBody = JSON.stringify({
-      ma_voucher:   maCode,
-      don_vi:       org || '',
-      gia_tri:      +item.maxVal || 0,
-      so_luong:     +item.qty   || 0,
-      han_su_dung:  hanvoucher  || '',
-      trang_thai:   'da_giao_clb',
-      ngay_giao:    today
-    });
-    try {
-      var res  = UrlFetchApp.fetch(
-        CONFIG.CRM_BASE_URL + '/api/voucher',
-        {
-          method:          'post',
-          contentType:     'application/json',
-          headers:         { 'X-Api-Key': key },
-          payload:         postBody,
-          muteHttpExceptions: true
-        }
-      );
-      var code = res.getResponseCode();
-      if (code === 200 || code === 201) {
-        created.push(maCode);
-        counter += +item.qty; // bước tới mã tiếp theo
-      } else {
-        errors.push({ ma: maCode, http: code, body: res.getContentText().slice(0, 200) });
-        counter += +item.qty; // vẫn tăng counter để không trùng mã
-      }
-    } catch(e) {
-      errors.push({ ma: maCode, error: e.message });
-      counter += +item.qty;
-    }
-  }
-
-  Logger.log('syncVouchersToCRM: created=' + JSON.stringify(created) + ' errors=' + JSON.stringify(errors));
-  return {
-    ok:      errors.length === 0,
-    created: created,
-    errors:  errors,
-    message: 'Tạo thành công ' + created.length + '/' + vItems.length + ' loại voucher'
-  };
-}
-
-function handleVoucherPrintNotify(payload) {
-  const { id, org, event, school, mavoucher, hanvoucher, voucher_print_qty, voucher_print_deadline, neg_items } = payload;
-
-  // Rate-limit: không gửi lại trong vòng 5 phút (tránh spam khi dashboard gửi trùng)
-  const cache = CacheService.getScriptCache();
-  const cacheKey = 'voucher_notify_' + id;
-  if (cache.get(cacheKey)) return { ok: true, skipped: true };
-  cache.put(cacheKey, '1', 300); // 5 phút
-
-  // Build breakdown: "Voucher 100%, SL: 2 cái"
-  // i.type hoặc i.label — dashboard có thể gửi theo 1 trong 2 field
-  const breakdown = (neg_items || [])
-    .filter(i => !i.isCash && (+i.qty || 0) > 0)
-    .map(i => {
-      const key = i.type || i.label || '?';
-      return `Voucher ${key}, SL: ${i.qty} cái`;
-    })
-    .join('\n');
-
-  // Format ngày dd/mm/yyyy từ ISO yyyy-MM-dd
-  function fmtDate(s) {
-    if (!s) return null;
-    const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})/);
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(s);
-  }
-
-  // Format dải mã: prefix.01 → prefix.NN
-  const vPrefix = (mavoucher || '').replace(/\.\d{2}$/, '');
-  const qty = parseInt(voucher_print_qty) || 0;
-  const codeRange = vPrefix && qty > 0
-    ? `\`${vPrefix}.01\` → \`${vPrefix}.${String(qty).padStart(2, '0')}\``
-    : mavoucher ? `\`${mavoucher}\`` : '(chưa có mã)';
-
-  const msg = [
-    '🎟️ *YÊU CẦU IN VOUCHER*',
-    `📌 *Chương trình:* ${org} — ${event}`,
-    school ? `🏫 *Trường:* ${school}` : null,
-    `🆔 *Mã:* ${codeRange}`,
-    `📦 *Tổng:* ${qty} voucher`,
-    breakdown ? `*Chi tiết:*\n${breakdown}` : null,
-    hanvoucher ? `📅 *Hạn voucher:* ${fmtDate(hanvoucher) || hanvoucher}` : null,
-    `⏰ *Deadline in:* ${fmtDate(voucher_print_deadline) || '(chưa xác định)'}`,
-  ].filter(Boolean).join('\n');
-
-  const res = tgCall('sendMessage', {
-    chat_id: CONFIG.TG_VOUCHER_CHAT_ID,
-    text: msg,
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [[
-        { text: '✅ Xác nhận đã in', callback_data: `confirm_print:${id}` },
-        { text: '❌ Báo lỗi',        callback_data: `print_error:${id}` },
-      ]]
-    },
-  });
-
-  const result = JSON.parse(res.getContentText());
-  if (!result.ok) throw new Error('Telegram: ' + (result.description || 'unknown'));
-  return { ok: true };
-}
-
-// ═══════════════════════════════════════════════════════════════
 // SETUP — chạy từng bước một lần duy nhất
 // ═══════════════════════════════════════════════════════════════
 
-/** Bước 1 — Khởi tạo sheet headers (chạy 1 lần) */
 function setupSheets() {
-  getSheet();        // tạo sheet Records với headers
-  getDeletedSheet(); // tạo sheet Deleted
+  getSheet();
+  getDeletedSheet();
   Logger.log('✅ Đã tạo/kiểm tra sheets: Records + Deleted');
 }
 
-/** Bước 1b — Lưu CRM API key vào Script Properties (chạy 1 lần) */
-function setupCrmApiKey() {
-  PropertiesService.getScriptProperties().setProperty('CRM_API_KEY', 'uz9a3wdn44U1EGTv');
-  Logger.log('✅ CRM_API_KEY đã được lưu vào Script Properties');
-}
-
-/** Bước 2 — Deploy Web App → lấy URL /exec → dán vào CONFIG.WEB_APP_URL, rồi chạy hàm này */
 function setupWebhook() {
   const webAppUrl = CONFIG.WEB_APP_URL;
   if (!webAppUrl || webAppUrl.includes('PASTE')) { Logger.log('❌ Chưa điền WEB_APP_URL!'); return; }
@@ -1370,17 +1125,6 @@ function setupWebhook() {
 // EXECUTION PROGRESS SCHEDULER — chạy mỗi ngày 8h sáng
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Quét tất cả hồ sơ đang ở stage "executing", kiểm tra mốc thời gian
- * so với ngày sự kiện (deadlineDate) và gửi báo cáo Telegram.
- *
- * Mốc hoạt động:
- *  T-5  → nhắc chuẩn bị quyền lợi trực tiếp
- *  T-2  → checklist lần cuối trước sự kiện
- *  T+1  → auto-complete quyền lợi Trực tiếp (không thông báo)
- *  T+3  → nhắc hoàn thiện quyền lợi hậu kỳ
- *  T+14 → tổng kết; nếu ≥80% → nút "Đóng hồ sơ"
- */
 function checkExecutingRecords() {
   const records = getAllRecords().filter(function(r) {
     return r.stage === 'executing' && r.trackingUrl && r.deadlineDate;
@@ -1402,14 +1146,14 @@ function checkExecutingRecords() {
   records.forEach(function(r) {
     const eventDate = new Date(r.deadlineDate);
     eventDate.setHours(0, 0, 0, 0);
-    const diff = Math.round((today - eventDate) / 864e5); // âm = trước sự kiện
+    const diff = Math.round((today - eventDate) / 864e5);
 
     const sentKey  = 'exec_sent_' + r.id;
     const sentList = JSON.parse(props.getProperty(sentKey) || '[]');
 
     MILESTONES.forEach(function(m) {
-      if (diff !== m.diffDay) return;       // chưa đến mốc này hôm nay
-      if (sentList.indexOf(m.key) !== -1) return; // đã gửi rồi
+      if (diff !== m.diffDay) return;
+      if (sentList.indexOf(m.key) !== -1) return;
 
       _handleExecMilestone(r, m.key);
       sentList.push(m.key);
@@ -1419,7 +1163,6 @@ function checkExecutingRecords() {
 }
 
 function _handleExecMilestone(record, milestoneKey) {
-  // T+1: auto-complete Trực tiếp (silent)
   if (milestoneKey === 'T+1') {
     const updated = autoCompleteDirectBenefits(record.trackingUrl);
     if (updated > 0) {
@@ -1484,7 +1227,6 @@ function _handleExecMilestone(record, milestoneKey) {
   }
 }
 
-/** Bước 3 — Tạo trigger tự động */
 function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('checkNewEmails').timeBased().everyMinutes(5).create();
@@ -1493,49 +1235,39 @@ function setupTriggers() {
   Logger.log('✅ Triggers: checkNewEmails (5p) + checkTelegramUpdates (1p) + checkExecutingRecords (8h daily)');
 }
 
-/** Migrate dữ liệu cũ từ JSON blob sang flat table */
 function migrateFromJsonBlobs() {
   const ss = getSpreadsheet();
   const oldSheet = ss.getSheetByName('Records_old') || ss.getSheetByName('Records');
   if (!oldSheet) { Logger.log('Không tìm thấy sheet cũ'); return; }
 
-  // Đọc dữ liệu cũ (format: id | JSON | updatedAt)
   const oldData = oldSheet.getDataRange().getValues();
   const records = [];
   for (let i = 1; i < oldData.length; i++) {
     if (!oldData[i][0]) continue;
     try {
-      // Thử parse cột 2 như JSON
       const r = JSON.parse(oldData[i][1]);
       if (r && r.id) records.push(r);
     } catch(e) {
-      // Nếu không parse được, bỏ qua
       Logger.log('Bỏ qua hàng ' + (i+1) + ': ' + e.message);
     }
   }
 
   if (!records.length) { Logger.log('Không có record nào để migrate'); return; }
 
-  // Đổi tên sheet cũ để bảo toàn
   oldSheet.setName('Records_old_backup');
-
-  // Tạo sheet mới
   const newSheet = ss.insertSheet('Records');
   _initSheetHeaders(newSheet);
 
-  // Ghi dữ liệu
   const rows = records.map(r => recordToRow(r));
   if (rows.length) newSheet.getRange(2, 1, rows.length, COLS.length).setValues(rows);
 
   Logger.log(`✅ Migrate xong: ${records.length} records → sheet Records mới`);
 }
 
-/** Test: gửi Telegram */
 function testTelegram() {
   sendTgText(CONFIG.TG_CHAT_ID, '✅ <b>PNE Bot đang hoạt động!</b>\n<i>Flat-table DB v2 sẵn sàng.</i>');
 }
 
-/** Test: fake email mới */
 function testFakeEmail() {
   const fakeRecord = {
     id: 'test_' + Date.now().toString(36), org: 'CLB Âm nhạc UTE',
