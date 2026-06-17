@@ -4409,6 +4409,11 @@ function toggleBenefit(rId,bId,checked){
   if(r.stage==='executing'&&r.benefits&&r.benefits.length>0&&r.benefits.every(b=>b.done)){
     r.stage='done';
     showToast('🏆 '+r.org+' — tất cả quyền lợi đã hoàn thành! Chiến dịch kết thúc.','success',5000);
+    // Gửi Telegram ngay khi hoàn thành 100%
+    if(r.trackingUrl){
+      fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'trackingDoneAlert',id:r.id})})
+        .catch(function(e){console.error('trackingDoneAlert:',e);});
+    }
   }
   r.updatedAt=new Date().toISOString();
   saveAll(a);
