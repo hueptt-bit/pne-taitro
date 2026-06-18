@@ -4221,12 +4221,12 @@ function renderNegItems(){
     if(!_negDraft.items.length){
       offerList.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:10px 0 6px">Chưa có — nhấn "+ Thêm voucher" hoặc vào tab <em>Offer & Duyệt</em> để tính trước</div>';
     }else{
-      // Sort display theo giá trị giảm dần, giữ nguyên origIdx cho callbacks
+      // Sort display theo giá trị đơn lẻ giảm dần (maxVal), giữ nguyên origIdx cho callbacks
       const _sortedNeg=_negDraft.items.map((item,i)=>({item,origIdx:i})).sort((a,b)=>{
         if(a.item.isCash&&!b.item.isCash)return 1;
         if(!a.item.isCash&&b.item.isCash)return -1;
-        const va=a.item.isCash?+a.item.cashVal||0:(+a.item.qty||0)*(+a.item.maxVal||0);
-        const vb=b.item.isCash?+b.item.cashVal||0:(+b.item.qty||0)*(+b.item.maxVal||0);
+        const va=a.item.isCash?+a.item.cashVal||0:+a.item.maxVal||0;
+        const vb=b.item.isCash?+b.item.cashVal||0:+b.item.maxVal||0;
         return vb-va;
       });
       offerList.innerHTML=_sortedNeg.map(({item,origIdx:i})=>`
@@ -4279,12 +4279,12 @@ function renderNegItems(){
     let html='';
     if(hasItems){
       html+=`<div style="font-weight:700;color:var(--tx);margin-bottom:6px">💰 Gói tài trợ</div>`;
-      // Sort voucher từ giá trị lớn → nhỏ (hiện kim xuống cuối)
+      // Sort voucher từ giá trị đơn lẻ lớn → nhỏ (hiện kim xuống cuối)
       const sortedItems=[..._negDraft.items].sort((a,b)=>{
-        const va=a.isCash?+a.cashVal||0:(+a.qty||0)*(+a.maxVal||0);
-        const vb=b.isCash?+b.cashVal||0:(+b.qty||0)*(+b.maxVal||0);
         if(a.isCash&&!b.isCash)return 1;
         if(!a.isCash&&b.isCash)return -1;
+        const va=a.isCash?+a.cashVal||0:+a.maxVal||0;
+        const vb=b.isCash?+b.cashVal||0:+b.maxVal||0;
         return vb-va;
       });
       html+=`<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:2px">
